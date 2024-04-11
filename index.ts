@@ -173,12 +173,12 @@ const check = async () => {
 								},
 							},
 							// current time, if desired
-							// {
-							// 	type: "equation",
-							// 	equation: {
-							// 		expression: `^{${currentTime.toLowerCase()}}`,
-							// 	},
-							// },
+							{
+								type: "equation",
+								equation: {
+									expression: `^{${currentTime.toLowerCase()}}`,
+								},
+							},
 						],
 					},
 				},
