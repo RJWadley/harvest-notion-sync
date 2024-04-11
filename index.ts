@@ -172,7 +172,7 @@ const check = async () => {
 									content: `${roundedTime} Hours\t`,
 								},
 							},
-                            // current time, if desired
+							// current time, if desired
 							// {
 							// 	type: "equation",
 							// 	equation: {
