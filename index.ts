@@ -36,6 +36,7 @@ const clientNamesMatch = (nameA: string, nameB: string) => {
 
 const interval = 5 * 1000;
 let lastCheck = "2024-04-10";
+let isFirstRun = true;
 const check = async () => {
 	const waiting: Promise<unknown>[] = [
 		// wait at least 5 seconds between each request
@@ -175,6 +176,16 @@ const check = async () => {
 		});
 
 		/**
+		 * in format YYYY-MM-DD
+		 */
+		const currentDate = new Date(
+			// 24 hours ago
+			new Date().getTime() - 24 * 60 * 60 * 1000,
+		)
+			.toISOString()
+			.split("T")[0];
+
+		/**
 		 * update this card with the total time
 		 */
 		waiting.push(
@@ -182,20 +193,35 @@ const check = async () => {
 				page_id: card.id,
 				properties: {
 					"Time Spent": {
-						rich_text: [
-							{
-								text: {
-									content: `${roundedTime} Hours\t`,
-								},
-							},
-							// current time, if desired
-							{
-								type: "equation",
-								equation: {
-									expression: `^{${currentTime.toLowerCase()}}`,
-								},
-							},
-						],
+						rich_text: isFirstRun
+							? [
+									{
+										text: {
+											content: `${roundedTime} Hours\t`,
+										},
+									},
+									// current date, if desired
+									{
+										type: "equation",
+										equation: {
+											expression: `^{${currentDate?.split("-").join("\\-")}}`,
+										},
+									},
+								]
+							: [
+									{
+										text: {
+											content: `${roundedTime} Hours\t`,
+										},
+									},
+									// current time, if desired
+									{
+										type: "equation",
+										equation: {
+											expression: `^{${currentTime.toLowerCase()}}`,
+										},
+									},
+								],
 					},
 				},
 			}),
@@ -204,6 +230,7 @@ const check = async () => {
 
 	await Promise.all(waiting);
 
+	isFirstRun = false;
 	check();
 };
 
