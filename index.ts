@@ -50,11 +50,14 @@ const check = async () => {
 		/* filter out entries with the same client and notes */
 		(entry, index, self) =>
 			index ===
-			self.findIndex(
-				(e) =>
+			self.findIndex((e) => {
+				try {
 					// @ts-expect-error - Harvest API is not fully typed
-					e.client?.id === entry.client?.id && e.notes === entry.notes,
-			),
+					return e.client?.id === entry.client?.id && e.notes === entry.notes;
+				} catch {
+					return false;
+				}
+			}),
 	);
 
 	console.log("Found", updatedEntries.length, "updated entries");
@@ -67,12 +70,17 @@ const check = async () => {
 	const clientRequest = await notion.databases.query({
 		database_id: clientDatabase,
 	});
-	const notionClients = Object.entries(clientRequest.results).map(
+	const notionClients = Object.entries(clientRequest.results).flatMap(
 		([key, value]) => {
-			const id = value.id;
-			// @ts-expect-error - Notion API is not typed
-			const name = value.properties?.["Project Name"]?.title?.at(0)?.plain_text;
-			return { id, name };
+			try {
+				const id = value.id;
+				const name =
+					// @ts-expect-error - Notion API is not typed
+					value.properties?.["Project Name"]?.title?.at(0)?.plain_text;
+				return [{ id, name }];
+			} catch {
+				return [];
+			}
 		},
 	);
 
@@ -81,7 +89,7 @@ const check = async () => {
 	 */
 	for (const entry of updatedEntries) {
 		const allEntries = await harvest.timeEntries.list({
-			// @ts-expect-error - Harvest API is not fully typed
+			// @ts-expect-error Harvest API is not fully typed
 			client_id: entry.client?.id,
 		});
 
@@ -97,7 +105,7 @@ const check = async () => {
 		const harvestName = (entry.client as { name?: string })?.name ?? "";
 
 		const matchingClients = notionClients.filter((client) =>
-			clientNamesMatch(client.name, harvestName),
+			clientNamesMatch(client?.name, harvestName),
 		);
 
 		/**
@@ -115,12 +123,19 @@ const check = async () => {
 			},
 		});
 
-		const matchingCards = matchingCardsRequest.results.filter(
-			(result) =>
-				// @ts-expect-error - Notion API is not typed
-				result.properties?.["Task name"]?.title?.at(0)?.plain_text?.toLowerCase().trim() ===
-				entry.notes.toLowerCase().trim(),
-		);
+		const matchingCards = matchingCardsRequest.results.filter((result) => {
+			try {
+				return (
+					// @ts-expect-error - Notion API is not typed
+					result.properties?.["Task name"]?.title
+						?.at(0)
+						.plain_text.toLowerCase()
+						.trim() === entry.notes.toLowerCase().trim()
+				);
+			} catch {
+				return false;
+			}
+		});
 
 		const card = matchingCards.at(0);
 
