@@ -200,6 +200,13 @@ const check = async () => {
 											content: `${roundedTime} Hours\t`,
 										},
 									},
+									// current date, if desired
+									// {
+									// 	type: "equation",
+									// 	equation: {
+									// 		expression: `^{${currentDate?.split("-").join("-")}}`,
+									// 	},
+									// },
 								]
 							: [
 									{
