@@ -34,14 +34,15 @@ const clientNamesMatch = (nameA: string, nameB: string) => {
 	);
 };
 
-let lastCheck = "2024-04-01";
+const interval = 5 * 1000;
+let lastCheck = "2024-04-10";
 const check = async () => {
 	const waiting: Promise<unknown>[] = [
 		// wait at least 5 seconds between each request
-		new Promise((resolve) => setTimeout(resolve, 5000)),
+		new Promise((resolve) => setTimeout(resolve, interval)),
 	];
 	const checkTime = lastCheck;
-	lastCheck = new Date().toISOString();
+	lastCheck = new Date(new Date().getTime() - interval).toISOString();
 
 	const updatedEntriesRequest = await harvest.timeEntries.list({
 		updated_since: checkTime,
