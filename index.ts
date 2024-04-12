@@ -34,7 +34,7 @@ const clientNamesMatch = (nameA: string, nameB: string) => {
 	);
 };
 
-let lastCheck = "2024-04-10";
+let lastCheck = "2024-04-01";
 const check = async () => {
 	const waiting: Promise<unknown>[] = [
 		// wait at least 5 seconds between each request
