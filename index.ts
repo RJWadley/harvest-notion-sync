@@ -204,7 +204,7 @@ const check = async () => {
 									{
 										type: "equation",
 										equation: {
-											expression: `^{${currentDate?.split("-").join("\\-")}}`,
+											expression: `^{${currentDate?.split("-").join("-")}}`,
 										},
 									},
 								]
