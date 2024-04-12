@@ -197,7 +197,7 @@ const check = async () => {
 							? [
 									{
 										text: {
-											content: `${roundedTime} Hours\t`,
+											content: `${roundedTime} Hours Spent\t`,
 										},
 									},
 									// current date, if desired
@@ -211,7 +211,7 @@ const check = async () => {
 							: [
 									{
 										text: {
-											content: `${roundedTime} Hours\t`,
+											content: `${roundedTime} Hours Spent\t`,
 										},
 									},
 									// current time, if desired
