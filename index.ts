@@ -29,8 +29,8 @@ const warn = (message: string, log: unknown) => {
 
 const clientNamesMatch = (nameA: string, nameB: string) => {
 	return (
-		nameA.toLowerCase().startsWith(nameB.toLowerCase()) ||
-		nameB.toLowerCase().startsWith(nameA.toLowerCase())
+		nameA.toLowerCase().trim().startsWith(nameB.toLowerCase().trim()) ||
+		nameB.toLowerCase().trim().startsWith(nameA.toLowerCase().trim())
 	);
 };
 
@@ -118,8 +118,8 @@ const check = async () => {
 		const matchingCards = matchingCardsRequest.results.filter(
 			(result) =>
 				// @ts-expect-error - Notion API is not typed
-				result.properties?.["Task name"]?.title?.at(0)?.plain_text ===
-				entry.notes,
+				result.properties?.["Task name"]?.title?.at(0)?.plain_text?.toLowerCase().trim() ===
+				entry.notes.toLowerCase().trim(),
 		);
 
 		const card = matchingCards.at(0);
