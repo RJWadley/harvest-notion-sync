@@ -1,5 +1,6 @@
 import Harvest from "harvest";
 import { Client } from "@notionhq/client";
+import { sleep } from "bun";
 
 const accessToken = Bun.env.HARVEST_TOKEN;
 const accountId = Bun.env.ACCOUNT_ID;
@@ -90,6 +91,7 @@ const check = async () => {
 	 * for each update entry, fetch all previous entries that match the client and notes
 	 */
 	for (const entry of updatedEntries) {
+		await sleep(100);
 		const allEntries = await harvest.timeEntries.list({
 			// @ts-expect-error Harvest API is not fully typed
 			client_id: entry.client?.id,
