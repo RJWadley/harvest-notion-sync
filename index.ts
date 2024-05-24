@@ -35,6 +35,25 @@ const clientNamesMatch = (nameA: string, nameB: string) => {
 	);
 };
 
+const taskNamesMatch = (
+	nameA: string | undefined,
+	nameB: string | undefined,
+) => {
+	if (!nameA || !nameB) {
+		return false;
+	}
+	return (
+		nameA
+			.toLowerCase()
+			// only keep alphanumeric characters
+			.replaceAll(/[^a-z0-9]/g, "") ===
+		nameB
+			.toLowerCase()
+			// only keep alphanumeric characters
+			.replaceAll(/[^a-z0-9]/g, "")
+	);
+};
+
 const interval = 5 * 1000;
 let lastCheck = "2024-04-01";
 let isFirstRun = true;
@@ -129,12 +148,10 @@ const check = async () => {
 
 		const matchingCards = matchingCardsRequest.results.filter((result) => {
 			try {
-				return (
+				return taskNamesMatch(
 					// @ts-expect-error - Notion API is not typed
-					result.properties?.["Task name"]?.title
-						?.at(0)
-						.plain_text.toLowerCase()
-						.trim() === entry.notes.toLowerCase().trim()
+					result.properties?.["Task name"]?.title?.at(0)?.plain_text,
+					entry.notes,
 				);
 			} catch {
 				return false;
