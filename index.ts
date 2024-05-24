@@ -24,8 +24,9 @@ const notion = new Client({
 	auth: process.env.NOTION_TOKEN,
 });
 
+let isFirstRun = true;
 const warn = (message: string, log: unknown) => {
-	console.warn(message);
+	if (!isFirstRun) console.warn(message);
 };
 
 const clientNamesMatch = (nameA: string, nameB: string) => {
@@ -63,7 +64,6 @@ const taskNamesMatch = (
 
 const interval = 5 * 1000;
 let lastCheck = "2024-04-01";
-let isFirstRun = true;
 const check = async () => {
 	const waiting: Promise<unknown>[] = [
 		// wait at least 5 seconds between each request
@@ -121,6 +121,13 @@ const check = async () => {
 	 * for each update entry, fetch all previous entries that match the client and notes
 	 */
 	for (const entry of updatedEntries) {
+		if (isFirstRun) {
+			const entryIndex = updatedEntries.indexOf(entry);
+			console.log(
+				`updating entry ${entryIndex + 1} of ${updatedEntries.length}`,
+			);
+		}
+
 		await sleep(100);
 		const allEntries = await harvest.timeEntries.list({
 			// @ts-expect-error Harvest API is not fully typed
@@ -188,13 +195,14 @@ const check = async () => {
 
 		const roundedTime = Math.round(totalTime * 100) / 100;
 
-		console.log(
-			"Updating",
-			`${harvestName} - ${entry.notes}`,
-			"with",
-			roundedTime,
-			"hours",
-		);
+		if (!isFirstRun)
+			console.log(
+				"Updating",
+				`${harvestName} - ${entry.notes}`,
+				"with",
+				roundedTime,
+				"hours",
+			);
 
 		/**
 		 * in format 2:21pm, with no leading 0s
