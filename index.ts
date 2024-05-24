@@ -81,8 +81,11 @@ const check = async () => {
 			index ===
 			self.findIndex((e) => {
 				try {
-					// @ts-expect-error - Harvest API is not fully typed
-					return e.client?.id === entry.client?.id && e.notes === entry.notes;
+					return (
+						// @ts-expect-error - Harvest API is not fully typed
+						e.client?.id === entry.client?.id &&
+						taskNamesMatch(e.notes, entry.notes)
+					);
 				} catch {
 					return false;
 				}
