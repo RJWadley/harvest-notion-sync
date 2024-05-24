@@ -82,7 +82,8 @@ const check = async () => {
 			}),
 	);
 
-	console.log("Found", updatedEntries.length, "updated entries");
+	if (updatedEntries.length !== 0)
+		console.log("Found", updatedEntries.length, "updated entries");
 	if (updatedEntries.length === 0) {
 		await Promise.all(waiting);
 		check();
