@@ -42,12 +42,19 @@ const taskNamesMatch = (
 	if (!nameA || !nameB) {
 		return false;
 	}
+
+	// some cards are in the format '[whatever] actual task name'
+	// for those we want to use just 'actual task name'
+
+	const onlyTaskNameA = nameA.trim().replace(/^\[.*\]/, "");
+	const onlyTaskNameB = nameB.trim().replace(/^\[.*\]/, "");
+
 	return (
-		nameA
+		onlyTaskNameA
 			.toLowerCase()
 			// only keep alphanumeric characters
 			.replaceAll(/[^a-z0-9]/g, "") ===
-		nameB
+		onlyTaskNameB
 			.toLowerCase()
 			// only keep alphanumeric characters
 			.replaceAll(/[^a-z0-9]/g, "")
