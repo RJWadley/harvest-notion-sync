@@ -1,3 +1,4 @@
+import { SlackAPIClient } from "slack-web-api-client";
 import Harvest from "harvest";
 import { Client } from "@notionhq/client";
 import { sleep } from "bun";
@@ -6,7 +7,14 @@ const accessToken = Bun.env.HARVEST_TOKEN;
 const accountId = Bun.env.ACCOUNT_ID;
 const clientDatabase = Bun.env.CLIENT_DATABASE;
 const taskDatabase = Bun.env.TASK_DATABASE;
-if (!accessToken || !accountId || !clientDatabase || !taskDatabase) {
+const slackToken = Bun.env.SLACK_BOT_TOKEN;
+if (
+	!accessToken ||
+	!accountId ||
+	!clientDatabase ||
+	!taskDatabase ||
+	!slackToken
+) {
 	throw new Error("Missing credentials");
 }
 
@@ -24,9 +32,24 @@ const notion = new Client({
 	auth: process.env.NOTION_TOKEN,
 });
 
+const client = new SlackAPIClient(slackToken);
+const channel = "C074ZFE9WNR";
+
 let isFirstRun = true;
-const warn = (message: string, log: unknown) => {
-	if (!isFirstRun) console.warn(message);
+const warn = async (message: string, log: object) => {
+	if (!isFirstRun) {
+		console.warn(message);
+		const slackMessage = await client.chat.postMessage({
+			channel,
+			text: message,
+		});
+
+		await client.chat.postMessage({
+			channel,
+			text: `debug details:\n\n${JSON.stringify(log)}`,
+			thread_ts: slackMessage.ts,
+		});
+	}
 };
 
 const clientNamesMatch = (nameA: string, nameB: string) => {
@@ -179,17 +202,14 @@ const check = async () => {
 		const card = matchingCards.at(0);
 
 		if (!card) {
-			warn(
-				`No matching cards found for ${harvestName} - ${entry.notes}`,
-				entry,
-			);
+			warn(`Could not find a card for [${harvestName}] ${entry.notes}`, entry);
 			continue;
 		}
 
 		if (matchingCards.length > 1) {
 			warn(
-				`Multiple matching cards found for ${harvestName} - ${entry.notes}`,
-				entry,
+				`Multiple matching cards found for [${harvestName}] ${entry.notes}`,
+				[entry, matchingCards],
 			);
 		}
 

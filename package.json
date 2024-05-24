@@ -1,19 +1,20 @@
 {
-	"name": "harvest-notion-sync",
-	"module": "index.ts",
-	"type": "module",
-	"devDependencies": {
-		"@biomejs/biome": "^1.6.4",
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5.0.0"
-	},
-	"dependencies": {
-		"@notionhq/client": "^2.2.15",
-		"harvest": "^2.2.6"
-	},
-	"scripts": {
-		"start": "bun install && bun run index.ts"
-	}
+  "name": "harvest-notion-sync",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@biomejs/biome": "^1.6.4",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "harvest": "^2.2.6",
+    "slack-web-api-client": "^0.11.1"
+  },
+  "scripts": {
+    "start": "bun install && bun run index.ts"
+  }
 }
