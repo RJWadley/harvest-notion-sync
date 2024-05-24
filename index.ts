@@ -257,6 +257,10 @@ const check = async () => {
 
 	await Promise.all(waiting);
 
+	if (isFirstRun) {
+		console.log("First run complete");
+	}
+
 	isFirstRun = false;
 	check();
 };
