@@ -36,8 +36,15 @@ const client = new SlackAPIClient(slackToken);
 const channel = "C074ZFE9WNR";
 
 let isFirstRun = true;
+const warnCoolDown = new Map<string, number>();
 const warn = async (message: string, log: object) => {
 	if (!isFirstRun) {
+		const coolDownUntil = warnCoolDown.get(message) ?? 0;
+		if (coolDownUntil > Date.now()) {
+			return;
+		}
+		warnCoolDown.set(message, Date.now() + 10_000);
+
 		console.warn(message);
 		const slackMessage = await client.chat.postMessage({
 			channel,
