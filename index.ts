@@ -93,7 +93,7 @@ const taskNamesMatch = (
 };
 
 const interval = 5 * 1000;
-let lastCheck = "2024-04-01";
+let lastCheck = "2024-05-01";
 const check = async () => {
 	const waiting: Promise<unknown>[] = [
 		// wait at least 5 seconds between each request
