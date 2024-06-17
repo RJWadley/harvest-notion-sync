@@ -179,6 +179,11 @@ const check = async () => {
 			clientNamesMatch(client?.name, harvestName),
 		);
 
+		if (matchingClients.length === 0) {
+			warn(`Could not find a client for [${harvestName}] ${entry.notes}`, entry);
+			continue;
+		}
+
 		/**
 		 * fetch the relevant card from notion
 		 */
