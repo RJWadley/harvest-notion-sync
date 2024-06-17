@@ -139,7 +139,10 @@ const check = async () => {
 				const id = value.id;
 				const name =
 					// @ts-expect-error - Notion API is not typed
-					value.properties?.["Project Name"]?.title?.at(0)?.plain_text;
+					value.properties?.["Project Name"]?.title
+						// @ts-expect-error - Notion API is not typed
+						?.map((title) => title.plain_text)
+						.join("");
 				return [{ id, name }];
 			} catch {
 				return [];
@@ -206,7 +209,10 @@ const check = async () => {
 			try {
 				return taskNamesMatch(
 					// @ts-expect-error - Notion API is not typed
-					result.properties?.["Task name"]?.title?.at(0)?.plain_text,
+					result.properties?.["Task name"]?.title
+						// @ts-expect-error - Notion API is not typed
+						?.map((title) => title.plain_text)
+						.join(""),
 					entry.notes,
 				);
 			} catch {

@@ -1,7 +1,5 @@
 {
-    "editor.defaultFormatter": "biomejs.biome",
-    "cSpell.words": [
-        "notionhq",
-        "reformcollective"
-    ]
+	"editor.defaultFormatter": "biomejs.biome",
+	"cSpell.words": ["notionhq", "reformcollective"],
+	"cSpell.enabled": false
 }
