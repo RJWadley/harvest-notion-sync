@@ -38,6 +38,7 @@ const channel = "C074ZFE9WNR";
 let isFirstRun = true;
 const warnCoolDown = new Map<string, number>();
 const warn = async (message: string, log: object) => {
+	console.warn(message);
 	if (!isFirstRun) {
 		const coolDownUntil = warnCoolDown.get(message) ?? 0;
 		if (coolDownUntil > Date.now()) {
@@ -45,7 +46,6 @@ const warn = async (message: string, log: object) => {
 		}
 		warnCoolDown.set(message, Date.now() + 10_000);
 
-		console.warn(message);
 		const slackMessage = await client.chat.postMessage({
 			channel,
 			text: message,
@@ -180,7 +180,10 @@ const check = async () => {
 		);
 
 		if (matchingClients.length === 0) {
-			warn(`Could not find a client for [${harvestName}] ${entry.notes}`, entry);
+			warn(
+				`Could not find a client for [${harvestName}] ${entry.notes}`,
+				entry,
+			);
 			continue;
 		}
 
