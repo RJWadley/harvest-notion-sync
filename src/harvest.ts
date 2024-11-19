@@ -48,7 +48,8 @@ export const startWatching = async () => {
 	const entries = updatedEntriesRequest.time_entries
 		.map((e) => timeEntrySchema.safeParse(e))
 		.filter((e) => e.success)
-		.map((e) => e.data);
+		.map((e) => e.data)
+		.filter((c) => c.client.name !== "Underbelly");
 
 	if (entries.length > 0)
 		console.log("[UDPATE] found", entries.length, "entries");
