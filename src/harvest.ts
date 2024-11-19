@@ -26,6 +26,10 @@ const timeEntrySchema = z.object({
 	notes: z.string(),
 });
 
+let firstRun = true;
+
+export const isFirstRun = () => firstRun;
+
 const interval = 5 * 1000;
 let lastCheck = "2024-05-01";
 export const startWatching = async () => {
@@ -60,6 +64,7 @@ export const startWatching = async () => {
 	);
 
 	await waiting;
+	firstRun = false;
 	startWatching();
 };
 

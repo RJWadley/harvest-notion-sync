@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
-import { getHoursByName } from "./harvest";
+import { getHoursByName, isFirstRun } from "./harvest";
 import { notionRateLimit } from "./limits";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
@@ -92,7 +92,6 @@ export class NotionCard {
 
 	public async update() {
 		console.log("syncing hours for", this.taskName);
-		const isNewCard = this.creationTime + 60_000 > Date.now();
 
 		await notionRateLimit();
 		const data = cardSchema.safeParse(
@@ -141,7 +140,7 @@ export class NotionCard {
 			page_id: this.notionId,
 			properties: {
 				"Time Spent": {
-					rich_text: isNewCard
+					rich_text: isFirstRun()
 						? [
 								{
 									text: {
@@ -186,7 +185,7 @@ export class NotionCard {
 			const cached = NotionCard.allCards[props.id];
 			if (cached) return cached;
 
-			console.log("downloading referenced card:", props.id);
+			if (!isFirstRun()) console.log("downloading referenced card:", props.id);
 
 			await notionRateLimit();
 			const card = cardSchema.safeParse(
