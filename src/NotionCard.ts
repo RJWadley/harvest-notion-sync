@@ -92,6 +92,7 @@ export class NotionCard {
 
 	public async update() {
 		console.log("syncing hours for", this.taskName);
+		const isNewCard = this.creationTime > Date.now() - 60 * 1000;
 
 		await notionRateLimit();
 		const data = cardSchema.safeParse(
@@ -133,7 +134,6 @@ export class NotionCard {
 			minute: "numeric",
 			hour12: true,
 		});
-		const isNewCard = this.creationTime > Date.now() - 60 * 1000;
 
 		// actually update the page
 		await notionRateLimit();
@@ -256,7 +256,7 @@ export class NotionCard {
 		}
 
 		await notionRateLimit();
-		const matchingCardRequest = await notion.databases.query({
+		const matchingCardsRequest = await notion.databases.query({
 			database_id: taskDatabase,
 			filter: {
 				property: "Project",
@@ -266,17 +266,43 @@ export class NotionCard {
 			},
 		});
 
-		const card = matchingCardRequest.results
+		const cards = matchingCardsRequest.results
 			.map((card) => cardSchema.safeParse(card))
 			.filter((e) => e.success)
-			.find((card) =>
+			.filter((card) =>
 				taskNamesMatch(
 					card.data.properties["Task name"].title
 						.map((title) => title.plain_text)
 						.join(""),
 					props.name,
 				),
-			)?.data;
+			);
+		const card = cards[0]?.data;
+		const secondCard = cards[1]?.data;
+
+		// if there are too many cards, that indicates an issue in notion
+		if (secondCard) {
+			for (const cardData of cards) {
+				const card = cardData.data;
+
+				await notionRateLimit();
+				await notion.pages.update({
+					page_id: card.id,
+					properties: {
+						"Time Spent": {
+							rich_text: [
+								{
+									text: {
+										content: "Time Error: Multiple notion cards found.",
+									},
+								},
+							],
+						},
+					},
+				});
+			}
+		}
+
 		if (!card) {
 			console.warn(`no card found for "${props.name}"`);
 			return null;
