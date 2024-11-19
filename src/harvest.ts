@@ -39,6 +39,7 @@ export const startWatching = async () => {
 	await harvestRateLimit();
 	const updatedEntriesRequest = await harvest.timeEntries.list({
 		updated_since: checkTime,
+		per_page: 5,
 	});
 
 	const entries = updatedEntriesRequest.time_entries
