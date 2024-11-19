@@ -185,7 +185,7 @@ export class NotionCard {
 			const cached = NotionCard.allCards[props.id];
 			if (cached) return cached;
 
-			if (!isFirstRun()) console.log("downloading referenced card:", props.id);
+			console.log("downloading referenced card:", props.id);
 
 			await notionRateLimit();
 			const card = cardSchema.safeParse(
@@ -231,7 +231,8 @@ export class NotionCard {
 		});
 		if (relevantCard) return relevantCard;
 
-		console.log(`downloading card for [${props.project}] - "${props.name}"`);
+		if (!isFirstRun())
+			console.log(`downloading card for [${props.project}] - "${props.name}"`);
 
 		await notionRateLimit();
 		const clientRequest = await notion.databases.query({
