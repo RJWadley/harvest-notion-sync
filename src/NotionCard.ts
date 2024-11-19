@@ -92,7 +92,7 @@ export class NotionCard {
 
 	public async update() {
 		console.log("syncing hours for", this.taskName);
-		const isNewCard = this.creationTime > Date.now() - 60 * 1000;
+		const isNewCard = this.creationTime + 60_000 > Date.now();
 
 		await notionRateLimit();
 		const data = cardSchema.safeParse(
@@ -145,14 +145,14 @@ export class NotionCard {
 						? [
 								{
 									text: {
-										content: `${this.getHours()} Hours Spent (includes subtasks)\t`,
+										content: `${this.getHours()} Hours Spent\t`,
 									},
 								},
 							]
 						: [
 								{
 									text: {
-										content: `[new] ${this.getHours()} Hours Spent (includes subtasks)\t`,
+										content: `${this.getHours()} Hours Spent\t`,
 									},
 								},
 								// current time, if desired
