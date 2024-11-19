@@ -1,4 +1,16 @@
 export const clientNamesMatch = (nameA: string, nameB: string) => {
+	if (
+		nameA.trim().toLowerCase() === "reform collective" &&
+		nameB.trim().toLowerCase() === "reform internal tasks"
+	)
+		return true;
+
+	if (
+		nameB.trim().toLowerCase() === "reform collective" &&
+		nameA.trim().toLowerCase() === "reform internal tasks"
+	)
+		return true;
+
 	return (
 		nameA.toLowerCase().trim().startsWith(nameB.toLowerCase().trim()) ||
 		nameB.toLowerCase().trim().startsWith(nameA.toLowerCase().trim())
