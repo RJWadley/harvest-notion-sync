@@ -26,6 +26,13 @@ const cardSchema = z.object({
 		Project: z.object({
 			relation: z.array(z.object({ id: z.string() })),
 		}),
+		"Time Spent": z.object({
+			rich_text: z.array(
+				z.object({
+					plain_text: z.string(),
+				}),
+			),
+		}),
 	}),
 });
 
@@ -48,8 +55,6 @@ export class NotionCard {
 
 	private localHours: number;
 	private childHours = 0;
-
-	private creationTime = Date.now();
 
 	private constructor({
 		card,
@@ -85,6 +90,15 @@ export class NotionCard {
 		const data = cardSchema.safeParse(await getPage(this.notionId)).data;
 		if (!data) return this.localHours;
 
+		const previousHoursAsText = data.properties["Time Spent"].rich_text
+			.map((t) => t.plain_text)
+			.join("")
+			.trim()
+			.split(" ")
+			.at(0)
+			?.trim();
+		const previousHours = Number(previousHoursAsText);
+
 		this.localHours = await getHoursByName({
 			taskName: this.taskName,
 			clientName: this.projectName,
@@ -110,9 +124,13 @@ export class NotionCard {
 		await Promise.all(parents.map((p) => p?.update()));
 
 		// actually update the page
-		await updateHours(this.notionId, this.getHours());
+		const newHours = this.getHours();
+		if (newHours === previousHours) {
+			return;
+		}
+		await updateHours(this.notionId, newHours);
 		console.log(
-			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${this.getHours()} (${this.localHours} + ${this.childHours})`,
+			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${newHours} (${this.localHours} + ${this.childHours})`,
 		);
 	}
 
