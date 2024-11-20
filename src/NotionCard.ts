@@ -3,7 +3,7 @@ import { clientNamesMatch, taskNamesMatch } from "./util";
 import { getHoursByName, isFirstRun } from "./harvest";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { logMessage, warn } from "./logging";
-import { HOUR } from "better-memory-cache";
+import { HOUR, MINUTE } from "better-memory-cache";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -82,9 +82,12 @@ export class NotionCard {
 			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
 		);
 
-		setTimeout(() => {
-			this.randomUpdate();
-		}, HOUR * Math.random());
+		setTimeout(
+			() => {
+				this.randomUpdate();
+			},
+			HOUR * Math.random() + 10 * MINUTE,
+		);
 	}
 
 	private getHours() {
