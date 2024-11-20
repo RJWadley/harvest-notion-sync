@@ -1,6 +1,7 @@
 import { Client } from "@notionhq/client";
 import { isFirstRun } from "./harvest";
-import { notionRateLimit } from "./limits";
+import { notionRateLimit, notionWriteLimiter } from "./limits";
+import Cache, { MINUTE } from "better-memory-cache";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
 const taskDatabase = Bun.env.TASK_DATABASE || "";
@@ -13,14 +14,35 @@ const notion = new Client({
 	auth: notionToken,
 });
 
-export const getPage = async (notionId: string) => {
+/**
+ * page queries
+ */
+
+const runGetPage = async (notionId: string) => {
 	await notionRateLimit();
 	return notion.pages.retrieve({
 		page_id: notionId,
 	});
 };
+const pageCache = new Cache<ReturnType<typeof runGetPage>>({
+	namespace: "page",
+	expireAfterMs: MINUTE,
+});
+export const getPage: typeof runGetPage = async (notionId) => {
+	const cacheKey = notionId;
+	const cached = pageCache.get(cacheKey);
+	if (cached) return cached;
 
-export const queryDatabase = async ({
+	const result = runGetPage(notionId);
+	pageCache.set(cacheKey, result);
+	return await result;
+};
+
+/**
+ * database queries
+ */
+
+const runQueryDatabase = async ({
 	type,
 	filter,
 }: {
@@ -34,7 +56,26 @@ export const queryDatabase = async ({
 	});
 };
 
-export const updateHours = async (notionId: string, hours: number) => {
+const databaseCache = new Cache<ReturnType<typeof runQueryDatabase>>({
+	namespace: "database",
+	expireAfterMs: MINUTE,
+});
+
+export const queryDatabase: typeof runQueryDatabase = async (options) => {
+	const cacheKey = JSON.stringify(options);
+	const cached = databaseCache.get(cacheKey);
+	if (cached) return cached;
+
+	const result = runQueryDatabase(options);
+	databaseCache.set(cacheKey, result);
+	return await result;
+};
+
+/**
+ * mutations
+ */
+
+const runUpdateHours = async (notionId: string, hours: number) => {
 	await notionRateLimit();
 
 	/**
@@ -81,7 +122,12 @@ export const updateHours = async (notionId: string, hours: number) => {
 	}
 };
 
-export const sendError = async (taskId: string) => {
+export const updateHours: typeof runUpdateHours = async (notionId, hours) =>
+	notionWriteLimiter(() => runUpdateHours(notionId, hours));
+
+const runSendError = async (taskId: string) => {
+	await notionRateLimit();
+
 	try {
 		await notion.pages.update({
 			page_id: taskId,
@@ -101,3 +147,6 @@ export const sendError = async (taskId: string) => {
 		console.warn(`failed to send error for ${taskId}`, e);
 	}
 };
+
+export const sendError: typeof runSendError = async (taskId) =>
+	notionWriteLimiter(() => runSendError(taskId));

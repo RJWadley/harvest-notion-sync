@@ -2,8 +2,12 @@ import { sleep } from "bun";
 import { pRateLimit } from "p-ratelimit";
 
 const notionLimiter = pRateLimit({
-	interval: 1200,
+	interval: 1000,
 	rate: 3, // 3 API calls per interval
+});
+
+export const notionWriteLimiter = pRateLimit({
+	concurrency: 1,
 });
 
 const harvestLimiter = pRateLimit({
