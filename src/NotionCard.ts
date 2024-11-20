@@ -233,18 +233,14 @@ export class NotionCard {
 					props.name,
 				),
 			);
-		const card = cards[0]?.data;
-		const secondCard = cards[1]?.data;
 
 		// if there are too many cards, that indicates an issue in notion
-		if (secondCard) {
-			for (const cardData of cards) {
-				const card = cardData.data;
-				await sendError(card.id);
-				return null;
-			}
+		if (cards.length > 1) {
+			await Promise.all(cards.map((card) => sendError(card.data.id)));
+			return null;
 		}
 
+		const card = cards[0]?.data;
 		if (!card) {
 			console.warn(`no card found for "${props.name}"`);
 			return null;

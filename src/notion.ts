@@ -136,7 +136,8 @@ const runSendError = async (taskId: string) => {
 					rich_text: [
 						{
 							text: {
-								content: "Time Error: Multiple notion cards found.",
+								content:
+									"Time Error: Multiple notion cards share the same name",
 							},
 						},
 					],
