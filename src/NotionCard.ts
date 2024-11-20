@@ -88,8 +88,6 @@ export class NotionCard {
 	}
 
 	public async update() {
-		logMessage("syncing hours for", this.taskName);
-
 		const data = cardSchema.safeParse(await getPage(this.notionId)).data;
 		if (!data) return this.localHours;
 

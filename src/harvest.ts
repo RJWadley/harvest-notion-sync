@@ -35,7 +35,6 @@ export const isFirstRun = () => firstRun;
 const interval = 5 * 1000;
 let lastCheck: string | undefined;
 export const startWatching = async () => {
-	console.log("\nChecking for updates...");
 	const waiting =
 		// wait at least 5 seconds between each request
 		new Promise((resolve) => setTimeout(resolve, interval));
@@ -63,8 +62,7 @@ export const startWatching = async () => {
 		.filter((c) => c.client.name !== "Underbelly")
 		.filter((c) => c.client.name !== "Underbelly (Square)");
 
-	if (entries.length > 0)
-		logMessage("[UDPATE] found", entries.length, "entries");
+	if (entries.length > 0) logMessage("[LOOP] found", entries.length, "entries");
 
 	await Promise.all(
 		entries.map(async (e) => {
