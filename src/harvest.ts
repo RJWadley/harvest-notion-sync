@@ -33,7 +33,7 @@ let firstRun = true;
 export const isFirstRun = () => firstRun;
 
 const interval = 5 * 1000;
-let lastCheck = "2024-05-01";
+let lastCheck: string | undefined;
 export const startWatching = async () => {
 	const waiting =
 		// wait at least 5 seconds between each request
@@ -45,7 +45,6 @@ export const startWatching = async () => {
 	await harvestRateLimit();
 	const updatedEntriesRequest = await harvest.timeEntries.list({
 		updated_since: checkTime,
-		per_page: 1,
 		is_running: false,
 	});
 	await harvestRateLimit();
