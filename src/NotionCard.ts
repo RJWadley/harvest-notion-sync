@@ -82,7 +82,9 @@ export class NotionCard {
 			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
 		);
 
-		this.randomUpdate();
+		setTimeout(() => {
+			this.randomUpdate();
+		}, HOUR * Math.random());
 	}
 
 	private getHours() {
@@ -90,9 +92,10 @@ export class NotionCard {
 	}
 
 	private async randomUpdate() {
+		this.update();
 		setTimeout(() => {
-			this.update().then(() => this.randomUpdate());
-		}, HOUR * Math.random());
+			this.randomUpdate();
+		}, HOUR);
 	}
 
 	public async update() {
