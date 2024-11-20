@@ -2,7 +2,7 @@ import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
 import { getHoursByName, isFirstRun } from "./harvest";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
-import { logMessage } from "./logging";
+import { logMessage, warn } from "./logging";
 import { HOUR } from "better-memory-cache";
 
 const cardSchema = z.object({
@@ -219,7 +219,7 @@ export class NotionCard {
 				),
 			)?.data;
 		if (!client) {
-			console.warn(`no client found for "${props.project}"`);
+			warn(`no client found for "${props.project}"`, undefined);
 			return null;
 		}
 
@@ -253,7 +253,7 @@ export class NotionCard {
 
 		const card = cards[0]?.data;
 		if (!card) {
-			console.warn(`no card found for "${props.name}"`);
+			warn(`no card found for "${props.name}" in ${props.project}`, undefined);
 			return null;
 		}
 

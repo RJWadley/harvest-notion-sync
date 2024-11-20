@@ -2,6 +2,7 @@ import { Client } from "@notionhq/client";
 import { isFirstRun } from "./harvest";
 import { notionRateLimit, notionWriteLimiter } from "./limits";
 import Cache, { MINUTE } from "better-memory-cache";
+import { warn } from "./logging";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
 const taskDatabase = Bun.env.TASK_DATABASE || "";
@@ -120,7 +121,7 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 		pageCache.set(notionId, result);
 		await result;
 	} catch (e) {
-		console.warn(`failed to update hours for ${notionId}`, e);
+		warn(`failed to update hours for ${notionId}`, e);
 	}
 };
 
@@ -147,7 +148,7 @@ const runSendError = async (taskId: string) => {
 			},
 		});
 	} catch (e) {
-		console.warn(`failed to send error for ${taskId}`, e);
+		warn(`failed to send error for ${taskId}`, e);
 	}
 };
 
