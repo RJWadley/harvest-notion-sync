@@ -35,6 +35,7 @@ export const isFirstRun = () => firstRun;
 const interval = 5 * 1000;
 let lastCheck: string | undefined;
 export const startWatching = async () => {
+	console.log("\nChecking for updates...");
 	const waiting =
 		// wait at least 5 seconds between each request
 		new Promise((resolve) => setTimeout(resolve, interval));
