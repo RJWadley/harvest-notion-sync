@@ -1,18 +1,7 @@
-import { Client } from "@notionhq/client";
 import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
 import { getHoursByName, isFirstRun } from "./harvest";
-import { notionRateLimit } from "./limits";
-
-const clientDatabase = Bun.env.CLIENT_DATABASE || "";
-const taskDatabase = Bun.env.TASK_DATABASE || "";
-if (!clientDatabase || !taskDatabase) {
-	throw new Error("Missing credentials");
-}
-
-const notion = new Client({
-	auth: process.env.NOTION_TOKEN,
-});
+import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -93,12 +82,7 @@ export class NotionCard {
 	public async update() {
 		console.log("syncing hours for", this.taskName);
 
-		await notionRateLimit();
-		const data = cardSchema.safeParse(
-			await notion.pages.retrieve({
-				page_id: this.notionId,
-			}),
-		).data;
+		const data = cardSchema.safeParse(await getPage(this.notionId)).data;
 		if (!data) return this.localHours;
 
 		this.localHours = await getHoursByName({
@@ -125,46 +109,8 @@ export class NotionCard {
 
 		await Promise.all(parents.map((p) => p?.update()));
 
-		/**
-		 * in format 2:21pm, with no leading 0s
-		 */
-		const currentTime = new Date().toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "numeric",
-			hour12: true,
-		});
-
 		// actually update the page
-		await notionRateLimit();
-		notion.pages.update({
-			page_id: this.notionId,
-			properties: {
-				"Time Spent": {
-					rich_text: isFirstRun()
-						? [
-								{
-									text: {
-										content: `${this.getHours()} Hours Spent\t`,
-									},
-								},
-							]
-						: [
-								{
-									text: {
-										content: `${this.getHours()} Hours Spent\t`,
-									},
-								},
-								// current time, if desired
-								{
-									type: "equation",
-									equation: {
-										expression: `^{${currentTime.toLowerCase()}}`,
-									},
-								},
-							],
-				},
-			},
-		});
+		await updateHours(this.notionId, this.getHours());
 		console.log(
 			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${this.getHours()} (${this.localHours} + ${this.childHours})`,
 		);
@@ -187,23 +133,13 @@ export class NotionCard {
 
 			console.log("downloading referenced card:", props.id);
 
-			await notionRateLimit();
-			const card = cardSchema.safeParse(
-				await notion.pages.retrieve({
-					page_id: props.id,
-				}),
-			).data;
+			const card = cardSchema.safeParse(await getPage(props.id)).data;
 			if (!card) return null;
 
 			const projectId = card.properties.Project.relation.at(0)?.id;
 			if (!projectId) return null;
 
-			await notionRateLimit();
-			const client = clientSchema.safeParse(
-				await notion.pages.retrieve({
-					page_id: projectId,
-				}),
-			).data;
+			const client = clientSchema.safeParse(await getPage(projectId)).data;
 			if (!client) return null;
 
 			// when we download a referenced card, we'll need to know the initial hours
@@ -234,9 +170,8 @@ export class NotionCard {
 		if (!isFirstRun())
 			console.log(`downloading card for [${props.project}] - "${props.name}"`);
 
-		await notionRateLimit();
-		const clientRequest = await notion.databases.query({
-			database_id: clientDatabase,
+		const clientRequest = await queryDatabase({
+			type: "client",
 		});
 
 		const client = clientRequest.results
@@ -255,9 +190,8 @@ export class NotionCard {
 			return null;
 		}
 
-		await notionRateLimit();
-		const matchingCardsRequest = await notion.databases.query({
-			database_id: taskDatabase,
+		const matchingCardsRequest = await queryDatabase({
+			type: "task",
 			filter: {
 				property: "Project",
 				relation: {
@@ -284,22 +218,7 @@ export class NotionCard {
 		if (secondCard) {
 			for (const cardData of cards) {
 				const card = cardData.data;
-
-				await notionRateLimit();
-				await notion.pages.update({
-					page_id: card.id,
-					properties: {
-						"Time Spent": {
-							rich_text: [
-								{
-									text: {
-										content: "Time Error: Multiple notion cards found.",
-									},
-								},
-							],
-						},
-					},
-				});
+				await sendError(card.id);
 			}
 		}
 
