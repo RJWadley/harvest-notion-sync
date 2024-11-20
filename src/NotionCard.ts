@@ -240,6 +240,7 @@ export class NotionCard {
 			for (const cardData of cards) {
 				const card = cardData.data;
 				await sendError(card.id);
+				return null;
 			}
 		}
 
