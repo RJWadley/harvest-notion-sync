@@ -88,7 +88,7 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 	});
 
 	try {
-		await notion.pages.update({
+		const result = notion.pages.update({
 			page_id: notionId,
 			properties: {
 				"Time Spent": {
@@ -117,7 +117,8 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 				},
 			},
 		});
-		pageCache.del(notionId);
+		pageCache.set(notionId, result);
+		await result;
 	} catch (e) {
 		console.warn(`failed to update hours for ${notionId}`, e);
 	}
