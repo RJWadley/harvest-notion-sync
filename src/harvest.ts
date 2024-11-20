@@ -4,6 +4,7 @@ import { clientNamesMatch, taskNamesMatch } from "./util";
 import { NotionCard } from "./NotionCard";
 import { harvestRateLimit } from "./limits";
 import Cache, { MINUTE } from "better-memory-cache";
+import { logMessage } from "./logging";
 
 const accessToken = Bun.env.HARVEST_TOKEN;
 const accountId = Bun.env.ACCOUNT_ID;
@@ -54,7 +55,7 @@ export const startWatching = async () => {
 		.filter((c) => c.client.name !== "Underbelly (Square)");
 
 	if (entries.length > 0)
-		console.log("[UDPATE] found", entries.length, "entries");
+		logMessage("[UDPATE] found", entries.length, "entries");
 
 	await Promise.all(
 		entries.map(async (e) => {
@@ -69,7 +70,7 @@ export const startWatching = async () => {
 	await waiting;
 	if (firstRun) {
 		firstRun = false;
-		console.log("First run complete!");
+		logMessage("First run complete!");
 	}
 	startWatching();
 };

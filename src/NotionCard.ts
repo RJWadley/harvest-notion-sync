@@ -2,6 +2,7 @@ import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
 import { getHoursByName, isFirstRun } from "./harvest";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
+import { logMessage } from "./logging";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -75,7 +76,7 @@ export class NotionCard {
 		this.localHours = initialHours ?? 0;
 		NotionCard.allCards[card.id] = this;
 
-		console.log(
+		logMessage(
 			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
 		);
 	}
@@ -85,7 +86,7 @@ export class NotionCard {
 	}
 
 	public async update() {
-		console.log("syncing hours for", this.taskName);
+		logMessage("syncing hours for", this.taskName);
 
 		const data = cardSchema.safeParse(await getPage(this.notionId)).data;
 		if (!data) return this.localHours;
@@ -126,13 +127,13 @@ export class NotionCard {
 		// actually update the page
 		const newHours = this.getHours();
 		if (newHours === previousHours) {
-			console.log(
+			logMessage(
 				`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
 			);
 			return;
 		}
 		await updateHours(this.notionId, newHours);
-		console.log(
+		logMessage(
 			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${newHours} (${this.localHours} + ${this.childHours})`,
 		);
 	}
@@ -152,7 +153,7 @@ export class NotionCard {
 			const cached = NotionCard.allCards[props.id];
 			if (cached) return cached;
 
-			console.log("downloading referenced card:", props.id);
+			logMessage("downloading referenced card:", props.id);
 
 			const card = cardSchema.safeParse(await getPage(props.id)).data;
 			if (!card) return null;
@@ -189,7 +190,7 @@ export class NotionCard {
 		if (relevantCard) return relevantCard;
 
 		if (!isFirstRun())
-			console.log(`downloading card for [${props.project}] - "${props.name}"`);
+			logMessage(`downloading card for [${props.project}] - "${props.name}"`);
 
 		const clientRequest = await queryDatabase({
 			type: "client",
