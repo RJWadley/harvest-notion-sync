@@ -126,6 +126,9 @@ export class NotionCard {
 		// actually update the page
 		const newHours = this.getHours();
 		if (newHours === previousHours) {
+			console.log(
+				`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change`,
+			);
 			return;
 		}
 		await updateHours(this.notionId, newHours);
