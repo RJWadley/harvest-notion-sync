@@ -47,7 +47,7 @@ const runQueryDatabase = async ({
 	filter,
 }: {
 	type: "client" | "task";
-	filter?: { property: string; relation: { contains: string } };
+	filter?: Parameters<typeof notion.databases.query>[0]["filter"];
 }) => {
 	await notionRateLimit();
 	return notion.databases.query({
