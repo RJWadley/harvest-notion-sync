@@ -69,10 +69,12 @@ export class NotionCard {
 		this.notionId = card.id;
 		this.taskName = card.properties["Task name"].title
 			.map((t) => t.plain_text)
-			.join("");
+			.join("")
+			.trim();
 		this.projectName = client.properties["Project Name"].title
 			.map((t) => t.plain_text)
-			.join("");
+			.join("")
+			.trim();
 		this.localHours = initialHours ?? 0;
 		NotionCard.allCards[card.id] = this;
 
