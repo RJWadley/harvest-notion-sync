@@ -1,8 +1,8 @@
-import Cache, { MINUTE } from "better-memory-cache";
+import Cache, { SECOND } from "better-memory-cache";
 
 const cache = new Cache<true>({
 	namespace: "logging",
-	expireAfterMs: MINUTE,
+	expireAfterMs: SECOND * 5,
 });
 
 export const logMessage = (...messages: (string | number)[]) => {
