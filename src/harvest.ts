@@ -3,6 +3,7 @@ import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
 import { NotionCard } from "./NotionCard";
 import { harvestRateLimit } from "./limits";
+import Cache, { MINUTE } from "better-memory-cache";
 
 const accessToken = Bun.env.HARVEST_TOKEN;
 const accountId = Bun.env.ACCOUNT_ID;
@@ -73,7 +74,7 @@ const clientSchema = z.object({
 	clients: z.object({ id: z.number(), name: z.string() }).array(),
 });
 
-export const getHoursByName = async ({
+const runGetHoursByName = async ({
 	taskName,
 	clientName,
 }: {
@@ -97,4 +98,17 @@ export const getHoursByName = async ({
 	const totalTime = allMatchingEntries.reduce((acc, e) => acc + e.hours, 0);
 
 	return Math.round(totalTime * 100) / 100;
+};
+const hoursCache = new Cache<ReturnType<typeof runGetHoursByName>>({
+	namespace: "hours",
+	expireAfterMs: MINUTE,
+});
+export const getHoursByName: typeof runGetHoursByName = async (options) => {
+	const cacheKey = JSON.stringify(options);
+	const cached = hoursCache.get(cacheKey);
+	if (cached) return cached;
+
+	const result = runGetHoursByName(options);
+	hoursCache.set(cacheKey, result);
+	return await result;
 };
