@@ -109,7 +109,7 @@ export class NotionCard {
 			.split(" ")
 			.at(0)
 			?.trim();
-		const previousHours = Number(previousHoursAsText);
+		const previousHours = Number.parseFloat(previousHoursAsText ?? "");
 
 		this.localHours = await getHoursByName({
 			taskName: this.taskName,
