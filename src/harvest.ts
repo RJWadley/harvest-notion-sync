@@ -67,7 +67,10 @@ export const startWatching = async () => {
 	);
 
 	await waiting;
-	firstRun = false;
+	if (firstRun) {
+		firstRun = false;
+		console.log("First run complete!");
+	}
 	startWatching();
 };
 
