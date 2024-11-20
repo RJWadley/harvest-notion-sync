@@ -3,7 +3,7 @@ import { z } from "zod";
 import { clientNamesMatch, taskNamesMatch } from "./util";
 import { NotionCard } from "./NotionCard";
 import { harvestRateLimit } from "./limits";
-import Cache, { MINUTE } from "better-memory-cache";
+import Cache, { HOUR, MINUTE } from "better-memory-cache";
 import { logMessage } from "./logging";
 
 const accessToken = Bun.env.HARVEST_TOKEN;
@@ -113,7 +113,7 @@ const runGetHoursByName = async ({
 };
 const hoursCache = new Cache<ReturnType<typeof runGetHoursByName>>({
 	namespace: "hours",
-	expireAfterMs: MINUTE,
+	expireAfterMs: HOUR / 100, // harvest uses decimal hours
 });
 export const getHoursByName: typeof runGetHoursByName = async (options) => {
 	const cacheKey = JSON.stringify(options);
