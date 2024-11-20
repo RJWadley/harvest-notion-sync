@@ -113,7 +113,7 @@ const runGetHoursByName = async ({
 };
 const hoursCache = new Cache<ReturnType<typeof runGetHoursByName>>({
 	namespace: "hours",
-	expireAfterMs: HOUR / 100, // harvest uses decimal hours
+	expireAfterMs: HOUR / 200, // harvest uses decimal hours
 });
 export const getHoursByName: typeof runGetHoursByName = async (options) => {
 	const cacheKey = JSON.stringify(options);
