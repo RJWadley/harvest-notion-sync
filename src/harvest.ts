@@ -45,9 +45,18 @@ export const startWatching = async () => {
 	await harvestRateLimit();
 	const updatedEntriesRequest = await harvest.timeEntries.list({
 		updated_since: checkTime,
+		per_page: 1,
+		is_running: false,
+	});
+	await harvestRateLimit();
+	const runningEntriesRequest = await harvest.timeEntries.list({
+		is_running: true,
 	});
 
-	const entries = updatedEntriesRequest.time_entries
+	const entries = [
+		...updatedEntriesRequest.time_entries,
+		...runningEntriesRequest.time_entries,
+	]
 		.map((e) => timeEntrySchema.safeParse(e))
 		.filter((e) => e.success)
 		.map((e) => e.data)

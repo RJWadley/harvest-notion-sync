@@ -117,6 +117,7 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 				},
 			},
 		});
+		pageCache.del(notionId);
 	} catch (e) {
 		console.warn(`failed to update hours for ${notionId}`, e);
 	}
