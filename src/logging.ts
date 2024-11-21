@@ -1,4 +1,4 @@
-import Cache, { SECOND } from "better-memory-cache";
+import Cache, { HOUR, SECOND } from "better-memory-cache";
 import { isFirstRun } from "./harvest";
 import { SlackAPIClient } from "slack-web-api-client";
 
@@ -31,7 +31,7 @@ export const warn = async (message: string, log: unknown) => {
 		if (coolDownUntil > Date.now()) {
 			return;
 		}
-		warnCoolDown.set(message, Date.now() + 10_000);
+		warnCoolDown.set(message, Date.now() + 5 * HOUR);
 
 		const slackMessage = await client.chat.postMessage({
 			channel,
