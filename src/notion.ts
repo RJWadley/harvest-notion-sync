@@ -88,6 +88,8 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 		hour12: true,
 	});
 
+	const roundedHours = Math.round(hours * 100) / 100;
+
 	try {
 		const result = notion.pages.update({
 			page_id: notionId,
@@ -97,14 +99,14 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 						? [
 								{
 									text: {
-										content: `${hours} Hours Spent\t`,
+										content: `${roundedHours} Hours Spent\t`,
 									},
 								},
 							]
 						: [
 								{
 									text: {
-										content: `${hours} Hours Spent\t`,
+										content: `${roundedHours} Hours Spent\t`,
 									},
 								},
 								// current time, if desired
