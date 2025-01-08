@@ -148,7 +148,9 @@ export class NotionCard {
 		}
 		await updateHours(this.notionId, newHours);
 		logMessage(
-			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${newHours} (${this.localHours} + ${this.childHours})`,
+			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${
+				Math.round(newHours * 100) / 100
+			} (${this.localHours} + ${Math.round(this.childHours * 100) / 100})`,
 		);
 	}
 
