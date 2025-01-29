@@ -252,6 +252,10 @@ export class NotionCard {
 
 		// if there are too many cards, that indicates an issue in notion
 		if (cards.length > 1) {
+			warn(
+				`multiple cards found for "${props.name}" in ${props.project}`,
+				undefined,
+			);
 			await Promise.all(cards.map((card) => sendError(card.data.id)));
 			return null;
 		}
@@ -261,6 +265,8 @@ export class NotionCard {
 			warn(`no card found for "${props.name}" in ${props.project}`, undefined);
 			return null;
 		}
+
+		logMessage(`downloaded card for [${props.project}] - "${props.name}"`);
 
 		return new NotionCard({ card, client });
 	}
