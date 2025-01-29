@@ -1,20 +1,16 @@
+const processClientName = (name: string) => {
+	const basic = name.trim().toLowerCase();
+
+	if (basic === "reform internal tasks") return "reform collective";
+
+	return basic.replaceAll("new form", "newform");
+};
+
 export const clientNamesMatch = (nameA: string, nameB: string) => {
-	if (
-		nameA.trim().toLowerCase() === "reform collective" &&
-		nameB.trim().toLowerCase() === "reform internal tasks"
-	)
-		return true;
+	const a = processClientName(nameA);
+	const b = processClientName(nameB);
 
-	if (
-		nameB.trim().toLowerCase() === "reform collective" &&
-		nameA.trim().toLowerCase() === "reform internal tasks"
-	)
-		return true;
-
-	return (
-		nameA.toLowerCase().trim().startsWith(nameB.toLowerCase().trim()) ||
-		nameB.toLowerCase().trim().startsWith(nameA.toLowerCase().trim())
-	);
+	return a.startsWith(b) || b.startsWith(a);
 };
 
 export const taskNamesMatch = (
