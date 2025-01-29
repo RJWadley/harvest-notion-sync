@@ -266,7 +266,8 @@ export class NotionCard {
 			return null;
 		}
 
-		logMessage(`downloaded card for [${props.project}] - "${props.name}"`);
+		if (!isFirstRun())
+			logMessage(`downloaded card for [${props.project}] - "${props.name}"`);
 
 		return new NotionCard({ card, client });
 	}
