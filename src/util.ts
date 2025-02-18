@@ -3,6 +3,8 @@ const processClientName = (name: string) => {
 
 	if (basic === "reform internal tasks") return "reform collective";
 
+	if (basic === "fluid (product)") return "fluid";
+
 	return basic.replaceAll("new form", "newform");
 };
 
