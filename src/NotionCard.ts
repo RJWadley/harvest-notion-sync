@@ -268,6 +268,13 @@ export class NotionCard {
 			return null;
 		}
 
+		const client = clients.find(c => c.id === card.properties.Project.relation.at(0)?.id);
+
+		if (!client) {
+			warn(`we found a card for "${props.name}" in ${props.project}, but then the client came back empty!`, undefined);
+			return null;
+		}
+
 		if (!isFirstRun())
 			logMessage(`downloaded card for [${props.project}] - "${props.name}"`);
 
