@@ -212,18 +212,18 @@ export class NotionCard {
 			type: "client",
 		});
 
-		const client = clientRequest.results
+		const clients = clientRequest.results
 			.map((client) => clientSchema.safeParse(client))
 			.filter((e) => e.success)
-			.find((client) =>
+			.filter((client) =>
 				clientNamesMatch(
 					client.data.properties["Project Name"].title
 						.map((title) => title.plain_text)
 						.join(""),
 					props.project,
 				),
-			)?.data;
-		if (!client) {
+			)?.map(c => c.data);
+		if (clients.length === 0) {
 			warn(`no client found for "${props.project}"`, undefined);
 			return null;
 		}
@@ -231,10 +231,12 @@ export class NotionCard {
 		const matchingCardsRequest = await queryDatabase({
 			type: "task",
 			filter: {
-				property: "Project",
-				relation: {
-					contains: client.id,
-				},
+				or: clients.map(client => ({
+					property: "Project",
+					relation: {
+						contains: client.id,
+					}
+				}))
 			},
 		});
 
