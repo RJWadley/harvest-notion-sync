@@ -5,7 +5,9 @@ const processClientName = (name: string) => {
 
 	if (basic === "fluid (product)") return "fluid";
 
-	if (basic === 'jillion llc') return "century";
+	if (basic === "jillion llc") return "century";
+
+	if (basic === "inside milk") return "milk inside";
 
 	return basic.replaceAll("new form", "newform");
 };
