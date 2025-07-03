@@ -63,6 +63,7 @@ export const startWatching = async () => {
 		.filter((c) => c.client.name !== "Underbelly (Square)");
 
 	if (entries.length > 0) logMessage("[LOOP] found", entries.length, "entries");
+	else logMessage("[LOOP] no entries found");
 
 	await Promise.all(
 		entries.map(async (e) => {

@@ -82,6 +82,10 @@ export class NotionCard {
 			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
 		);
 
+		// update immediately, then commence random updates
+		setTimeout(() => {
+			this.update();
+		}, MINUTE);
 		setTimeout(
 			() => {
 				this.randomUpdate();
@@ -222,7 +226,8 @@ export class NotionCard {
 						.join(""),
 					props.project,
 				),
-			)?.map(c => c.data);
+			)
+			?.map((c) => c.data);
 		if (clients.length === 0) {
 			warn(`no client found for "${props.project}"`, undefined);
 			return null;
@@ -231,12 +236,12 @@ export class NotionCard {
 		const matchingCardsRequest = await queryDatabase({
 			type: "task",
 			filter: {
-				or: clients.map(client => ({
+				or: clients.map((client) => ({
 					property: "Project",
 					relation: {
 						contains: client.id,
-					}
-				}))
+					},
+				})),
 			},
 		});
 
@@ -268,10 +273,15 @@ export class NotionCard {
 			return null;
 		}
 
-		const client = clients.find(c => c.id === card.properties.Project.relation.at(0)?.id);
+		const client = clients.find(
+			(c) => c.id === card.properties.Project.relation.at(0)?.id,
+		);
 
 		if (!client) {
-			warn(`we found a card for "${props.name}" in ${props.project}, but then the client came back empty!`, undefined);
+			warn(
+				`we found a card for "${props.name}" in ${props.project}, but then the client came back empty!`,
+				undefined,
+			);
 			return null;
 		}
 
