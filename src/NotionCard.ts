@@ -82,10 +82,6 @@ export class NotionCard {
 			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
 		);
 
-		// update immediately, then commence random updates
-		setTimeout(() => {
-			this.update();
-		}, MINUTE);
 		setTimeout(
 			() => {
 				this.randomUpdate();
@@ -286,7 +282,7 @@ export class NotionCard {
 		}
 
 		if (!isFirstRun())
-			logMessage(`downloaded card for [${props.project}] - "${props.name}"`);
+			logMessage(`downloading card for [${props.project}] - "${props.name}"`);
 
 		return new NotionCard({ card, client });
 	}
