@@ -28,9 +28,41 @@ const timeEntrySchema = z.object({
 	notes: z.string(),
 });
 
-let firstRun = true;
+export type UpdateType = "bulk" | "realtime";
 
-export const isFirstRun = () => firstRun;
+const processBulkUpdate = async (
+	entries: Array<{ client: { name: string }; hours: number; notes: string }>,
+) => {
+	let processed = 0;
+	const total = entries.length;
+
+	logMessage(`[BULK] Starting bulk update of ${total} entries`);
+
+	const chunkSize = 100;
+	for (let i = 0; i < entries.length; i += chunkSize) {
+		const chunk = entries.slice(i, i + chunkSize);
+
+		await Promise.all(
+			chunk.map(async (entry) => {
+				const card = await NotionCard.getOrCreate(
+					{
+						name: entry.notes,
+						project: entry.client.name,
+					},
+					"bulk",
+				);
+				await card?.update("bulk");
+			}),
+		);
+
+		processed += chunk.length;
+		logMessage(`[BULK] Processed ${processed}/${total} cards`);
+	}
+
+	logMessage(
+		`[BULK] Bulk update complete: ${processed}/${total} cards processed`,
+	);
+};
 
 const interval = 5 * 1000;
 let lastCheck: string | undefined;
@@ -42,12 +74,12 @@ export const startWatching = async () => {
 	const checkTime = lastCheck;
 	lastCheck = new Date(Date.now() - interval).toISOString();
 
-	await harvestRateLimit();
+	await harvestRateLimit("realtime");
 	const updatedEntriesRequest = await harvest.timeEntries.list({
 		updated_since: checkTime,
 		is_running: false,
 	});
-	await harvestRateLimit();
+	await harvestRateLimit("realtime");
 	const runningEntriesRequest = await harvest.timeEntries.list({
 		is_running: true,
 	});
@@ -62,24 +94,36 @@ export const startWatching = async () => {
 		.filter((c) => c.client.name !== "Underbelly")
 		.filter((c) => c.client.name !== "Underbelly (Square)");
 
-	if (entries.length > 0) logMessage("[LOOP] found", entries.length, "entries");
-	else logMessage("[LOOP] no entries found");
+	const updateType: UpdateType = entries.length > 100 ? "bulk" : "realtime";
 
-	await Promise.all(
-		entries.map(async (e) => {
-			const card = await NotionCard.getOrCreate({
-				name: e.notes,
-				project: e.client.name,
-			});
-			await card?.update();
-		}),
-	);
+	if (entries.length > 0) {
+		if (updateType === "realtime") {
+			logMessage("[LOOP] found", entries.length, "entries");
+		}
+	} else {
+		logMessage("[LOOP] no entries found");
+	}
+
+	if (updateType === "bulk") {
+		// Background bulk update - don't await
+		processBulkUpdate(entries);
+	} else {
+		// Realtime updates - await for immediate processing
+		await Promise.all(
+			entries.map(async (e) => {
+				const card = await NotionCard.getOrCreate(
+					{
+						name: e.notes,
+						project: e.client.name,
+					},
+					updateType,
+				);
+				await card?.update(updateType);
+			}),
+		);
+	}
 
 	await waiting;
-	if (firstRun) {
-		firstRun = false;
-		logMessage("First run complete!");
-	}
 	startWatching();
 };
 
@@ -90,17 +134,19 @@ const clientSchema = z.object({
 const runGetHoursByName = async ({
 	taskName,
 	clientName,
+	updateType,
 }: {
 	clientName: string;
 	taskName: string;
+	updateType: UpdateType;
 }) => {
-	await harvestRateLimit();
+	await harvestRateLimit(updateType);
 	const allClients = clientSchema.safeParse(await harvest.clients.list()).data
 		?.clients;
 	if (!allClients) throw new Error("clients did not match expected schema");
 
 	const client = allClients.find((c) => clientNamesMatch(c.name, clientName));
-	await harvestRateLimit();
+	await harvestRateLimit(updateType);
 	const allEntries = await harvest.timeEntries.list({
 		client_id: client?.id,
 	});

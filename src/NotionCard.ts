@@ -1,6 +1,7 @@
 import { HOUR, MINUTE } from "better-memory-cache";
 import { z } from "zod";
-import { getHoursByName, isFirstRun } from "./harvest";
+import type { UpdateType } from "./harvest";
+import { getHoursByName } from "./harvest";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
@@ -78,13 +79,9 @@ export class NotionCard {
 		this.localHours = initialHours ?? 0;
 		NotionCard.allCards[card.id] = this;
 
-		logMessage(
-			`downloaded card for [${this.projectName}] - "${this.taskName}"`,
-		);
-
 		setTimeout(
 			() => {
-				this.randomUpdate();
+				this.randomUpdate("bulk");
 			},
 			HOUR * Math.random() + 10 * MINUTE,
 		);
@@ -94,15 +91,17 @@ export class NotionCard {
 		return this.localHours + this.childHours;
 	}
 
-	private async randomUpdate() {
-		this.update();
+	private async randomUpdate(updateType: UpdateType) {
+		this.update(updateType);
 		setTimeout(() => {
-			this.randomUpdate();
+			this.randomUpdate(updateType);
 		}, HOUR);
 	}
 
-	public async update() {
-		const data = cardSchema.safeParse(await getPage(this.notionId)).data;
+	public async update(updateType: UpdateType) {
+		const data = cardSchema.safeParse(
+			await getPage(this.notionId, updateType),
+		).data;
 		if (!data) return this.localHours;
 
 		const previousHoursAsText = data.properties["Time Spent"].rich_text
@@ -117,13 +116,16 @@ export class NotionCard {
 		this.localHours = await getHoursByName({
 			taskName: this.taskName,
 			clientName: this.projectName,
+			updateType,
 		});
 
 		const parentIds = data.properties["Parent task"].relation.map((r) => r.id);
 		const childIds = data.properties["Sub-tasks"].relation.map((r) => r.id);
 
 		const children = await Promise.all(
-			childIds.map(async (childId) => NotionCard.getOrCreate({ id: childId })),
+			childIds.map(async (childId) =>
+				NotionCard.getOrCreate({ id: childId }, updateType),
+			),
 		);
 
 		this.childHours = children
@@ -132,26 +134,32 @@ export class NotionCard {
 
 		const parents = await Promise.all(
 			parentIds.map(async (parentId) =>
-				NotionCard.getOrCreate({ id: parentId }),
+				NotionCard.getOrCreate({ id: parentId }, updateType),
 			),
 		);
 
-		await Promise.all(parents.map((p) => p?.update()));
+		await Promise.all(parents.map((p) => p?.update(updateType)));
 
 		// actually update the page
 		const newHours = this.getHours();
 		if (newHours === previousHours) {
-			logMessage(
-				`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
-			);
+			if (updateType === "realtime") {
+				logMessage(
+					`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
+				);
+			}
 			return;
 		}
-		await updateHours(this.notionId, newHours);
-		logMessage(
-			`[WRITE] updated hours for [${this.projectName}] - "${this.taskName}" to ${
-				Math.round(newHours * 100) / 100
-			} (${this.localHours} + ${Math.round(this.childHours * 100) / 100})`,
-		);
+		await updateHours(this.notionId, newHours, updateType);
+		if (updateType === "realtime") {
+			logMessage(
+				`[WRITE] updated hours for [${this.projectName}] - "${
+					this.taskName
+				}" to ${Math.round(newHours * 100) / 100} (${this.localHours} + ${
+					Math.round(this.childHours * 100) / 100
+				})`,
+			);
+		}
 	}
 
 	public static async getOrCreate(
@@ -161,6 +169,7 @@ export class NotionCard {
 					name: string;
 					project: string;
 			  },
+		updateType: UpdateType,
 	) {
 		/**
 		 * create by id
@@ -169,15 +178,17 @@ export class NotionCard {
 			const cached = NotionCard.allCards[props.id];
 			if (cached) return cached;
 
-			logMessage("downloading referenced card:", props.id);
-
-			const card = cardSchema.safeParse(await getPage(props.id)).data;
+			const card = cardSchema.safeParse(
+				await getPage(props.id, updateType),
+			).data;
 			if (!card) return null;
 
 			const projectId = card.properties.Project.relation.at(0)?.id;
 			if (!projectId) return null;
 
-			const client = clientSchema.safeParse(await getPage(projectId)).data;
+			const client = clientSchema.safeParse(
+				await getPage(projectId, updateType),
+			).data;
 			if (!client) return null;
 
 			// when we download a referenced card, we'll need to know the initial hours
@@ -189,6 +200,7 @@ export class NotionCard {
 				clientName: client.properties["Project Name"].title
 					.map((t) => t.plain_text)
 					.join(""),
+				updateType,
 			});
 
 			return new NotionCard({ card, client, initialHours });
@@ -205,11 +217,9 @@ export class NotionCard {
 		});
 		if (relevantCard) return relevantCard;
 
-		if (!isFirstRun())
-			logMessage(`downloading card for [${props.project}] - "${props.name}"`);
-
 		const clientRequest = await queryDatabase({
 			type: "client",
+			updateType,
 		});
 
 		const clients = clientRequest.results
@@ -225,7 +235,7 @@ export class NotionCard {
 			)
 			?.map((c) => c.data);
 		if (clients.length === 0) {
-			warn(`no client found for "${props.project}"`, undefined);
+			warn(`no client found for "${props.project}"`, undefined, updateType);
 			return null;
 		}
 
@@ -239,6 +249,7 @@ export class NotionCard {
 					},
 				})),
 			},
+			updateType,
 		});
 
 		const cards = matchingCardsRequest.results
@@ -258,14 +269,21 @@ export class NotionCard {
 			warn(
 				`multiple cards found for "${props.name}" in ${props.project}`,
 				undefined,
+				updateType,
 			);
-			await Promise.all(cards.map((card) => sendError(card.data.id)));
+			await Promise.all(
+				cards.map((card) => sendError(card.data.id, updateType)),
+			);
 			return null;
 		}
 
 		const card = cards[0]?.data;
 		if (!card) {
-			warn(`no card found for "${props.name}" in ${props.project}`, undefined);
+			warn(
+				`no card found for "${props.name}" in ${props.project}`,
+				undefined,
+				updateType,
+			);
 			return null;
 		}
 
@@ -277,12 +295,10 @@ export class NotionCard {
 			warn(
 				`we found a card for "${props.name}" in ${props.project}, but then the client came back empty!`,
 				undefined,
+				updateType,
 			);
 			return null;
 		}
-
-		if (!isFirstRun())
-			logMessage(`downloading card for [${props.project}] - "${props.name}"`);
 
 		return new NotionCard({ card, client });
 	}

@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import Cache, { MINUTE } from "better-memory-cache";
-import { isFirstRun } from "./harvest";
-import { notionRateLimit, notionWriteLimiter } from "./limits";
+import type { UpdateType } from "./harvest";
+import { notionRateLimit, notionWriteLimit } from "./limits";
 import { logMessage, warn } from "./logging";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
@@ -21,6 +21,7 @@ const notion = new Client({
 async function withRetry<T>(
 	operation: () => Promise<T>,
 	operationName: string,
+	updateType: UpdateType,
 	maxRetries = 10,
 	baseDelay = 1000,
 ): Promise<T> {
@@ -48,6 +49,7 @@ async function withRetry<T>(
 				warn(
 					`${operationName} failed after ${maxRetries} attempts due to timeouts`,
 					error,
+					updateType,
 				);
 				throw error;
 			}
@@ -67,23 +69,24 @@ async function withRetry<T>(
  * page queries
  */
 
-const runGetPage = async (notionId: string) => {
-	await notionRateLimit();
+const runGetPage = async (notionId: string, updateType: UpdateType) => {
+	await notionRateLimit(updateType);
 	return withRetry(
 		() => notion.pages.retrieve({ page_id: notionId }),
 		`getPage(${notionId})`,
+		updateType,
 	);
 };
 const pageCache = new Cache<ReturnType<typeof runGetPage>>({
 	namespace: "page",
 	expireAfterMs: MINUTE,
 });
-export const getPage: typeof runGetPage = async (notionId) => {
+export const getPage: typeof runGetPage = async (notionId, updateType) => {
 	const cacheKey = notionId;
 	const cached = pageCache.get(cacheKey);
 	if (cached) return cached;
 
-	const result = runGetPage(notionId);
+	const result = runGetPage(notionId, updateType);
 	pageCache.set(cacheKey, result);
 	return await result;
 };
@@ -95,11 +98,13 @@ export const getPage: typeof runGetPage = async (notionId) => {
 const runQueryDatabase = async ({
 	type,
 	filter,
+	updateType,
 }: {
 	type: "client" | "task";
 	filter?: Parameters<typeof notion.databases.query>[0]["filter"];
+	updateType: UpdateType;
 }) => {
-	await notionRateLimit();
+	await notionRateLimit(updateType);
 	return withRetry(
 		() =>
 			notion.databases.query({
@@ -107,6 +112,7 @@ const runQueryDatabase = async ({
 				filter,
 			}),
 		`queryDatabase(${type})`,
+		updateType,
 	);
 };
 
@@ -129,8 +135,12 @@ export const queryDatabase: typeof runQueryDatabase = async (options) => {
  * mutations
  */
 
-const runUpdateHours = async (notionId: string, hours: number) => {
-	await notionRateLimit();
+const runUpdateHours = async (
+	notionId: string,
+	hours: number,
+	updateType: UpdateType,
+) => {
+	await notionRateLimit(updateType);
 
 	/**
 	 * in format 2:21pm, with no leading 0s
@@ -150,46 +160,55 @@ const runUpdateHours = async (notionId: string, hours: number) => {
 					page_id: notionId,
 					properties: {
 						"Time Spent": {
-							rich_text: isFirstRun()
-								? [
-										{
-											text: {
-												content: `${roundedHours} Hours Spent\t`,
+							rich_text:
+								updateType === "bulk"
+									? [
+											{
+												text: {
+													content: `${roundedHours} Hours Spent\t`,
+												},
 											},
-										},
-									]
-								: [
-										{
-											text: {
-												content: `${roundedHours} Hours Spent\t`,
+										]
+									: [
+											{
+												text: {
+													content: `${roundedHours} Hours Spent\t`,
+												},
 											},
-										},
-										// current time, if desired
-										{
-											type: "equation",
-											equation: {
-												expression: `^{${currentTime.toLowerCase()}}`,
+											// current time, if desired
+											{
+												type: "equation",
+												equation: {
+													expression: `^{${currentTime.toLowerCase()}}`,
+												},
 											},
-										},
-									],
+										],
 						},
 					},
 				}),
 			`updateHours(${notionId})`,
+			updateType,
 		);
 		pageCache.set(notionId, Promise.resolve(result));
 		return result;
 	} catch (e) {
-		warn(`failed to update hours for ${notionId}`, e);
+		warn(`failed to update hours for ${notionId}`, e, updateType);
 		throw e; // Re-throw to maintain error handling behavior
 	}
 };
 
-export const updateHours: typeof runUpdateHours = async (notionId, hours) =>
-	notionWriteLimiter(() => runUpdateHours(notionId, hours));
+export const updateHours: typeof runUpdateHours = async (
+	notionId,
+	hours,
+	updateType,
+) =>
+	await notionWriteLimit(
+		() => runUpdateHours(notionId, hours, updateType),
+		updateType,
+	);
 
-const runSendError = async (taskId: string) => {
-	await notionRateLimit();
+const runSendError = async (taskId: string, updateType: UpdateType) => {
+	await notionRateLimit("realtime");
 
 	try {
 		await withRetry(
@@ -210,12 +229,13 @@ const runSendError = async (taskId: string) => {
 					},
 				}),
 			`sendError(${taskId})`,
+			updateType,
 		);
 	} catch (e) {
-		warn(`failed to send error for ${taskId}`, e);
+		warn(`failed to send error for ${taskId}`, e, updateType);
 		throw e; // Re-throw to maintain error handling behavior
 	}
 };
 
-export const sendError: typeof runSendError = async (taskId) =>
-	notionWriteLimiter(() => runSendError(taskId));
+export const sendError: typeof runSendError = async (taskId, updateType) =>
+	notionWriteLimit(() => runSendError(taskId, updateType), updateType);

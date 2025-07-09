@@ -1,24 +1,88 @@
-import { sleep } from "bun";
-import { pRateLimit } from "p-ratelimit";
+import { asyncQueue, queue } from "@tanstack/pacer";
+import type { UpdateType } from "./harvest";
 
-const notionLimiter = pRateLimit({
-	interval: 1000,
-	rate: 3, // 3 API calls per interval
-});
+// Priority levels - higher numbers get processed first
+const PRIORITY = {
+	realtime: 10,
+	bulk: 1,
+} as const;
 
-export const notionWriteLimiter = pRateLimit({
-	concurrency: 1,
-});
+// Rate limiting operation wrapper
+interface RateLimitTask {
+	resolve: () => void;
+	priority: number;
+}
 
-const harvestLimiter = pRateLimit({
-	interval: 15_000,
-	rate: 100,
-});
+interface WriteOperation {
+	operation: () => Promise<any>;
+	priority: number;
+}
 
-export const notionRateLimit = async () => {
-	return await notionLimiter(() => sleep(0));
+// Notion read rate limiter - 3 operations per second
+const notionReadQueue = queue<RateLimitTask>(
+	async (task) => {
+		task.resolve();
+	},
+	{
+		wait: 1000 / 3, // ~333ms between operations
+		getPriority: (task) => task.priority,
+	},
+);
+
+// Notion write queue - concurrency 1 (only one write at a time)
+const notionWriteQueue = asyncQueue<WriteOperation>(
+	async ({ operation }) => {
+		return await operation();
+	},
+	{
+		concurrency: 1,
+		getPriority: (task) => task.priority,
+	},
+);
+
+// Harvest rate limiter - 100 operations per 15 seconds
+const harvestReadQueue = queue<RateLimitTask>(
+	async (task) => {
+		task.resolve();
+	},
+	{
+		wait: 15_000 / 100, // 150ms between operations
+		getPriority: (task) => task.priority,
+	},
+);
+
+// Exported functions
+export const notionRateLimit = (updateType: UpdateType): Promise<void> => {
+	return new Promise<void>((resolve) => {
+		const priority = PRIORITY[updateType];
+		notionReadQueue({
+			resolve,
+			priority,
+		});
+	});
 };
 
-export const harvestRateLimit = async () => {
-	return await harvestLimiter(() => sleep(0));
+export const notionWriteLimit = <T>(
+	operation: () => Promise<T>,
+	updateType: UpdateType,
+): Promise<T> => {
+	return new Promise<T>((resolve) => {
+		notionWriteQueue({
+			operation: async () => {
+				const result = await operation();
+				resolve(result);
+			},
+			priority: PRIORITY[updateType],
+		});
+	});
+};
+
+export const harvestRateLimit = (updateType: UpdateType): Promise<void> => {
+	return new Promise<void>((resolve) => {
+		const priority = PRIORITY[updateType];
+		harvestReadQueue({
+			resolve,
+			priority,
+		});
+	});
 };

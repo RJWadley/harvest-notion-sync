@@ -1,6 +1,6 @@
 import Cache, { HOUR, SECOND } from "better-memory-cache";
 import { SlackAPIClient } from "slack-web-api-client";
-import { isFirstRun } from "./harvest";
+import type { UpdateType } from "./harvest";
 
 const slackToken = Bun.env.SLACK_BOT_TOKEN;
 if (!slackToken) {
@@ -24,9 +24,13 @@ export const logMessage = (...messages: (string | number)[]) => {
 };
 
 const warnCoolDown = new Map<string, number>();
-export const warn = async (message: string, log: unknown) => {
-	console.warn(message);
-	if (!isFirstRun()) {
+export const warn = async (
+	message: string,
+	log: unknown,
+	updateType: UpdateType,
+) => {
+	if (updateType === "realtime") {
+		console.warn(message);
 		const coolDownUntil = warnCoolDown.get(message) ?? 0;
 		if (coolDownUntil > Date.now()) {
 			return;
