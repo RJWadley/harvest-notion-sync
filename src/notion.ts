@@ -21,7 +21,7 @@ const notion = new Client({
 async function withRetry<T>(
 	operation: () => Promise<T>,
 	operationName: string,
-	maxRetries = 3,
+	maxRetries = 10,
 	baseDelay = 1000,
 ): Promise<T> {
 	let lastError: any;
@@ -43,7 +43,7 @@ async function withRetry<T>(
 				throw error;
 			}
 
-			if (attempt === maxRetries) {
+			if (attempt >= maxRetries) {
 				// Last attempt failed, log and rethrow
 				warn(
 					`${operationName} failed after ${maxRetries} attempts due to timeouts`,
@@ -52,14 +52,11 @@ async function withRetry<T>(
 				throw error;
 			}
 
-			// Calculate delay with exponential backoff
-			const delay = baseDelay * Math.pow(2, attempt - 1);
 			logMessage(
-				`${operationName} attempt ${attempt} timed out, retrying in ${delay}ms...`,
+				`${operationName} attempt ${attempt} timed out, retrying in ${baseDelay * attempt}ms...`,
 			);
 
-			// Wait before retrying
-			await new Promise((resolve) => setTimeout(resolve, delay));
+			await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt));
 		}
 	}
 
