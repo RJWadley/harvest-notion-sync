@@ -1,7 +1,6 @@
-import { HOUR, MINUTE } from "better-memory-cache";
 import { z } from "zod";
-import type { UpdateType } from "./harvest";
 import { getHoursByName } from "./harvest";
+import type { UpdateType } from "./limits";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
@@ -79,23 +78,17 @@ export class NotionCard {
 		this.localHours = initialHours ?? 0;
 		NotionCard.allCards[card.id] = this;
 
-		setTimeout(
-			() => {
-				this.randomUpdate("bulk");
-			},
-			HOUR * Math.random() + 10 * MINUTE,
-		);
+		this.backgroundUpdate("background");
 	}
 
 	private getHours() {
 		return this.localHours + this.childHours;
 	}
 
-	private async randomUpdate(updateType: UpdateType) {
-		this.update(updateType);
-		setTimeout(() => {
-			this.randomUpdate(updateType);
-		}, HOUR);
+	private async backgroundUpdate(updateType: UpdateType) {
+		await this.update(updateType);
+
+		this.backgroundUpdate(updateType);
 	}
 
 	public async update(updateType: UpdateType) {

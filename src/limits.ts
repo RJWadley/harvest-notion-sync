@@ -1,11 +1,12 @@
 import { asyncQueue, queue } from "@tanstack/pacer";
-import type { UpdateType } from "./harvest";
 
 // Priority levels - higher numbers get processed first
 const PRIORITY = {
 	realtime: 10,
-	bulk: 1,
+	bulk: 2,
+	background: 1,
 } as const;
+export type UpdateType = keyof typeof PRIORITY;
 
 // Rate limiting operation wrapper
 interface RateLimitTask {

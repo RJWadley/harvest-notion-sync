@@ -1,7 +1,7 @@
 import Cache, { SECOND } from "better-memory-cache";
 import Harvest from "harvest";
 import { z } from "zod";
-import { harvestRateLimit } from "./limits";
+import { harvestRateLimit, type UpdateType } from "./limits";
 import { logMessage } from "./logging";
 import { NotionCard } from "./NotionCard";
 import { clientNamesMatch, taskNamesMatch } from "./util";
@@ -27,8 +27,6 @@ const timeEntrySchema = z.object({
 	hours: z.number(),
 	notes: z.string(),
 });
-
-export type UpdateType = "bulk" | "realtime";
 
 const processBulkUpdate = async (
 	entries: Array<{ client: { name: string }; hours: number; notes: string }>,

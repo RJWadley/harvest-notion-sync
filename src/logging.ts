@@ -1,6 +1,6 @@
 import Cache, { HOUR, SECOND } from "better-memory-cache";
 import { SlackAPIClient } from "slack-web-api-client";
-import type { UpdateType } from "./harvest";
+import type { UpdateType } from "./limits";
 
 const slackToken = Bun.env.SLACK_BOT_TOKEN;
 if (!slackToken) {

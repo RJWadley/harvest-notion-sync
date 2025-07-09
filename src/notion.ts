@@ -1,6 +1,6 @@
 import { Client } from "@notionhq/client";
 import Cache, { MINUTE } from "better-memory-cache";
-import type { UpdateType } from "./harvest";
+import type { UpdateType } from "./limits";
 import { notionRateLimit, notionWriteLimit } from "./limits";
 import { logMessage, warn } from "./logging";
 
