@@ -121,7 +121,10 @@ export const startWatching = async () => {
 		);
 	}
 
+	// at least 2 seconds of downtime between each request
+	await new Promise((resolve) => setTimeout(resolve, 2000));
 	await waiting;
+
 	startWatching();
 };
 
