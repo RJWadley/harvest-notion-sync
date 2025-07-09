@@ -1,4 +1,4 @@
-export default {
+module.exports = {
 	name: "harvest",
 	script: "index.ts",
 	interpreter: "bun",
