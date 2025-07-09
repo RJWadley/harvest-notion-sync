@@ -21,6 +21,6 @@
 		"zod": "^3.25.76"
 	},
 	"scripts": {
-		"start": "bun install && bun run index.ts"
+		"start": "bun install && bun --bun run index.ts"
 	}
 }
