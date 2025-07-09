@@ -4,7 +4,7 @@
 	"type": "module",
 	"packageManager": "bun",
 	"devDependencies": {
-		"@biomejs/biome": "^2.0.6",
+		"@biomejs/biome": "^2.1.1",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
@@ -16,7 +16,7 @@
 		"harvest": "^2.2.6",
 		"p-ratelimit": "^1.0.1",
 		"slack-web-api-client": "^1.1.6",
-		"zod": "^3.25.71"
+		"zod": "^3.25.76"
 	},
 	"scripts": {
 		"start": "bun install && bun run index.ts"

@@ -1,6 +1,6 @@
 import Cache, { HOUR, SECOND } from "better-memory-cache";
-import { isFirstRun } from "./harvest";
 import { SlackAPIClient } from "slack-web-api-client";
+import { isFirstRun } from "./harvest";
 
 const slackToken = Bun.env.SLACK_BOT_TOKEN;
 if (!slackToken) {

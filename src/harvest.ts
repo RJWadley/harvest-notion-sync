@@ -1,10 +1,10 @@
+import Cache, { SECOND } from "better-memory-cache";
 import Harvest from "harvest";
 import { z } from "zod";
-import { clientNamesMatch, taskNamesMatch } from "./util";
-import { NotionCard } from "./NotionCard";
 import { harvestRateLimit } from "./limits";
-import Cache, { HOUR, MINUTE, SECOND } from "better-memory-cache";
 import { logMessage } from "./logging";
+import { NotionCard } from "./NotionCard";
+import { clientNamesMatch, taskNamesMatch } from "./util";
 
 const accessToken = Bun.env.HARVEST_TOKEN;
 const accountId = Bun.env.ACCOUNT_ID;
@@ -40,7 +40,7 @@ export const startWatching = async () => {
 		new Promise((resolve) => setTimeout(resolve, interval));
 
 	const checkTime = lastCheck;
-	lastCheck = new Date(new Date().getTime() - interval).toISOString();
+	lastCheck = new Date(Date.now() - interval).toISOString();
 
 	await harvestRateLimit();
 	const updatedEntriesRequest = await harvest.timeEntries.list({

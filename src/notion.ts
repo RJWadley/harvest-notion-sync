@@ -1,8 +1,8 @@
 import { Client } from "@notionhq/client";
+import Cache, { MINUTE } from "better-memory-cache";
 import { isFirstRun } from "./harvest";
 import { notionRateLimit, notionWriteLimiter } from "./limits";
-import Cache, { MINUTE } from "better-memory-cache";
-import { warn, logMessage } from "./logging";
+import { logMessage, warn } from "./logging";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
 const taskDatabase = Bun.env.TASK_DATABASE || "";
