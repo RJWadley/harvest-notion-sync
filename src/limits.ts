@@ -1,4 +1,22 @@
+import { Client } from "@notionhq/client";
 import { asyncQueue, queue } from "@tanstack/pacer";
+
+// Initialize Notion clients
+const notionTokenA = Bun.env.NOTION_TOKEN_A || "";
+const notionTokenB = Bun.env.NOTION_TOKEN_B || "";
+const notionTokenC = Bun.env.NOTION_TOKEN_C || "";
+const notionTokenD = Bun.env.NOTION_TOKEN_D || "";
+
+if (!notionTokenA || !notionTokenB || !notionTokenC || !notionTokenD) {
+	throw new Error("Missing NOTION_TOKEN_A through NOTION_TOKEN_D credentials");
+}
+
+const notionClients = [
+	new Client({ auth: notionTokenA }),
+	new Client({ auth: notionTokenB }),
+	new Client({ auth: notionTokenC }),
+	new Client({ auth: notionTokenD }),
+];
 
 // Priority levels - higher numbers get processed first
 const PRIORITY = {
@@ -9,7 +27,13 @@ const PRIORITY = {
 export type UpdateType = keyof typeof PRIORITY;
 
 // Rate limiting operation wrapper
-interface RateLimitTask {
+interface NotionRateLimitTask {
+	resolve: (client: Client) => void;
+	priority: number;
+}
+
+// Rate limiting task for harvest (returns void, not client)
+interface HarvestRateLimitTask {
 	resolve: () => void;
 	priority: number;
 }
@@ -19,16 +43,26 @@ interface WriteOperation {
 	priority: number;
 }
 
-// Notion read rate limiter - 3 operations per second
-const notionReadQueue = queue<RateLimitTask>(
-	async (task) => {
-		task.resolve();
-	},
-	{
-		wait: 1000 / 3, // ~333ms between operations
-		getPriority: (task) => task.priority,
-	},
+// Notion read rate limiters - 4 clients, each with 3 operations per second
+const notionReadQueues = notionClients.map((client) =>
+	queue<NotionRateLimitTask>(
+		async (task) => {
+			task.resolve(client);
+		},
+		{
+			wait: 1000 / 3, // ~333ms between operations
+			getPriority: (task) => task.priority,
+		},
+	),
 );
+
+let queueIndex = 0;
+const getNotionReadQueue = () => {
+	const queue = notionReadQueues[queueIndex];
+	queueIndex = (queueIndex + 1) % notionReadQueues.length;
+	if (!queue) throw new Error("Queue not found");
+	return queue;
+};
 
 // Notion write queue - concurrency 1 (only one write at a time)
 const notionWriteQueue = asyncQueue<WriteOperation>(
@@ -42,7 +76,7 @@ const notionWriteQueue = asyncQueue<WriteOperation>(
 );
 
 // Harvest rate limiter - 100 operations per 15 seconds
-const harvestReadQueue = queue<RateLimitTask>(
+const harvestReadQueue = queue<HarvestRateLimitTask>(
 	async (task) => {
 		task.resolve();
 	},
@@ -53,10 +87,12 @@ const harvestReadQueue = queue<RateLimitTask>(
 );
 
 // Exported functions
-export const notionRateLimit = (updateType: UpdateType): Promise<void> => {
-	return new Promise<void>((resolve) => {
+export const notionRateLimit = (updateType: UpdateType): Promise<Client> => {
+	return new Promise<Client>((resolve) => {
 		const priority = PRIORITY[updateType];
-		notionReadQueue({
+		const queue = getNotionReadQueue();
+		if (!queue) throw new Error("Queue not found");
+		queue({
 			resolve,
 			priority,
 		});

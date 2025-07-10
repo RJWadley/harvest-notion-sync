@@ -1,4 +1,4 @@
-import { Client } from "@notionhq/client";
+import type { Client } from "@notionhq/client";
 import Cache, { MINUTE } from "better-memory-cache";
 import type { UpdateType } from "./limits";
 import { notionRateLimit, notionWriteLimit } from "./limits";
@@ -6,14 +6,10 @@ import { logMessage, warn } from "./logging";
 
 const clientDatabase = Bun.env.CLIENT_DATABASE || "";
 const taskDatabase = Bun.env.TASK_DATABASE || "";
-const notionToken = Bun.env.NOTION_TOKEN || "";
-if (!clientDatabase || !taskDatabase || !notionToken) {
-	throw new Error("Missing credentials");
-}
 
-const notion = new Client({
-	auth: notionToken,
-});
+if (!clientDatabase || !taskDatabase) {
+	throw new Error("Missing CLIENT_DATABASE or TASK_DATABASE credentials");
+}
 
 /**
  * Retry wrapper for Notion API calls that handles timeout errors
@@ -70,7 +66,7 @@ async function withRetry<T>(
  */
 
 const runGetPage = async (notionId: string, updateType: UpdateType) => {
-	await notionRateLimit(updateType);
+	const notion = await notionRateLimit(updateType);
 	return withRetry(
 		() => notion.pages.retrieve({ page_id: notionId }),
 		`getPage(${notionId})`,
@@ -101,10 +97,10 @@ const runQueryDatabase = async ({
 	updateType,
 }: {
 	type: "client" | "task";
-	filter?: Parameters<typeof notion.databases.query>[0]["filter"];
+	filter?: Parameters<typeof Client.prototype.databases.query>[0]["filter"];
 	updateType: UpdateType;
 }) => {
-	await notionRateLimit(updateType);
+	const notion = await notionRateLimit(updateType);
 	return withRetry(
 		() =>
 			notion.databases.query({
@@ -140,8 +136,6 @@ const runUpdateHours = async (
 	hours: number,
 	updateType: UpdateType,
 ) => {
-	await notionRateLimit(updateType);
-
 	/**
 	 * in format 2:21pm, with no leading 0s
 	 */
@@ -152,6 +146,7 @@ const runUpdateHours = async (
 	});
 
 	const roundedHours = Math.round(hours * 100) / 100;
+	const notion = await notionRateLimit(updateType);
 
 	try {
 		const result = await withRetry(
@@ -208,7 +203,7 @@ export const updateHours: typeof runUpdateHours = async (
 	);
 
 const runSendError = async (taskId: string, updateType: UpdateType) => {
-	await notionRateLimit("realtime");
+	const notion = await notionRateLimit("realtime");
 
 	try {
 		await withRetry(
