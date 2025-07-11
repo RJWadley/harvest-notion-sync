@@ -57,6 +57,7 @@ export class NotionCard {
 
 	private localHours: number;
 	private childHours = 0;
+	private isUpdating = false;
 
 	private constructor({
 		card,
@@ -95,66 +96,82 @@ export class NotionCard {
 	}
 
 	public async update(updateType: UpdateType) {
-		const data = cardSchema.safeParse(
-			await getPage(this.notionId, updateType),
-		).data;
-		if (!data) return this.localHours;
-
-		const previousHoursAsText = data.properties["Time Spent"].rich_text
-			.map((t) => t.plain_text)
-			.join("")
-			.trim()
-			.split(" ")
-			.at(0)
-			?.trim();
-		const previousHours = Number.parseFloat(previousHoursAsText ?? "");
-
-		this.localHours = await getHoursByName({
-			taskName: this.taskName,
-			clientName: this.projectName,
-			updateType,
-		});
-
-		const parentIds = data.properties["Parent task"].relation.map((r) => r.id);
-		const childIds = data.properties["Sub-tasks"].relation.map((r) => r.id);
-
-		const children = await Promise.all(
-			childIds.map(async (childId) =>
-				NotionCard.getOrCreate({ id: childId }, updateType),
-			),
-		);
-
-		this.childHours = children
-			.filter((c) => c !== null)
-			.reduce((acc, c) => acc + c.getHours(), 0);
-
-		const parents = await Promise.all(
-			parentIds.map(async (parentId) =>
-				NotionCard.getOrCreate({ id: parentId }, updateType),
-			),
-		);
-
-		await Promise.all(parents.map((p) => p?.update(updateType)));
-
-		// actually update the page
-		const newHours = this.getHours();
-		if (newHours === previousHours) {
+		if (this.isUpdating) {
 			if (updateType === "realtime") {
 				logMessage(
-					`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
+					`[SKIP] update on [${this.projectName}] - "${this.taskName}" because it is already updating`,
 				);
 			}
 			return;
 		}
-		await updateHours(this.notionId, newHours, updateType);
-		if (updateType === "realtime") {
-			logMessage(
-				`[WRITE] updated hours for [${this.projectName}] - "${
-					this.taskName
-				}" to ${Math.round(newHours * 100) / 100} (${this.localHours} + ${
-					Math.round(this.childHours * 100) / 100
-				})`,
+		this.isUpdating = true;
+
+		try {
+			const data = cardSchema.safeParse(
+				await getPage(this.notionId, updateType),
+			).data;
+			if (!data) return this.localHours;
+
+			const previousHoursAsText = data.properties["Time Spent"].rich_text
+				.map((t) => t.plain_text)
+				.join("")
+				.trim()
+				.split(" ")
+				.at(0)
+				?.trim();
+			const previousHours = Number.parseFloat(previousHoursAsText ?? "");
+
+			this.localHours = await getHoursByName({
+				taskName: this.taskName,
+				clientName: this.projectName,
+				updateType,
+			});
+
+			const parentIds = data.properties["Parent task"].relation.map(
+				(r) => r.id,
 			);
+			const childIds = data.properties["Sub-tasks"].relation.map((r) => r.id);
+
+			const children = await Promise.all(
+				childIds.map(async (childId) =>
+					NotionCard.getOrCreate({ id: childId }, updateType),
+				),
+			);
+
+			this.childHours = children
+				.filter((c) => c !== null)
+				.reduce((acc, c) => acc + c.getHours(), 0);
+
+			const parents = await Promise.all(
+				parentIds.map(async (parentId) =>
+					NotionCard.getOrCreate({ id: parentId }, updateType),
+				),
+			);
+
+			await Promise.all(parents.map((p) => p?.update(updateType)));
+
+			// actually update the page
+			const newHours = this.getHours();
+			if (newHours === previousHours) {
+				if (updateType === "realtime") {
+					logMessage(
+						`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
+					);
+				}
+				return;
+			}
+			await updateHours(this.notionId, newHours, updateType);
+			if (updateType === "realtime") {
+				logMessage(
+					`[WRITE] updated hours for [${this.projectName}] - "${
+						this.taskName
+					}" to ${Math.round(newHours * 100) / 100} (${this.localHours} + ${
+						Math.round(this.childHours * 100) / 100
+					})`,
+				);
+			}
+		} finally {
+			this.isUpdating = false;
 		}
 	}
 
