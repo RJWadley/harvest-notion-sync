@@ -5,6 +5,7 @@ import type { UpdateType } from "./limits";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
+import { $ } from "bun";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -313,6 +314,7 @@ export class NotionCard {
 				undefined,
 				updateType,
 			);
+			$`say wee woo`;
 			return null;
 		}
 
