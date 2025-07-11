@@ -1,10 +1,10 @@
+import { MINUTE } from "better-memory-cache";
 import { z } from "zod";
 import { getHoursByName } from "./harvest";
 import type { UpdateType } from "./limits";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
-import { MINUTE } from "better-memory-cache";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -57,7 +57,7 @@ export class NotionCard {
 
 	private localHours: number;
 	private childHours = 0;
-	private isUpdating = false;
+	private updatePromise: Promise<void> | null = null;
 
 	private constructor({
 		card,
@@ -95,22 +95,21 @@ export class NotionCard {
 		}, MINUTE * 5);
 	}
 
-	public async update(updateType: UpdateType) {
-		if (this.isUpdating) {
-			if (updateType === "realtime") {
-				logMessage(
-					`[SKIP] update on [${this.projectName}] - "${this.taskName}" because it is already updating`,
-				);
-			}
-			return;
+	public update(updateType: UpdateType): Promise<void> {
+		if (this.updatePromise) {
+			return this.updatePromise;
 		}
-		this.isUpdating = true;
 
+		this.updatePromise = this.doUpdate(updateType);
+		return this.updatePromise;
+	}
+
+	private async doUpdate(updateType: UpdateType): Promise<void> {
 		try {
 			const data = cardSchema.safeParse(
 				await getPage(this.notionId, updateType),
 			).data;
-			if (!data) return this.localHours;
+			if (!data) return;
 
 			const previousHoursAsText = data.properties["Time Spent"].rich_text
 				.map((t) => t.plain_text)
@@ -171,7 +170,7 @@ export class NotionCard {
 				);
 			}
 		} finally {
-			this.isUpdating = false;
+			this.updatePromise = null;
 		}
 	}
 
