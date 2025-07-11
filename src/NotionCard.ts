@@ -95,16 +95,31 @@ export class NotionCard {
 		}, MINUTE * 5);
 	}
 
-	public update(updateType: UpdateType): Promise<void> {
+	public update(updateType: UpdateType, __chain: string[] = []): Promise<void> {
+		if (__chain.includes(this.notionId)) {
+			const fullChain = [...__chain, this.notionId].join(" -> ");
+			warn(
+				`Circular dependency detected! Update chain: ${fullChain}`,
+				undefined,
+				updateType,
+			);
+			return Promise.resolve(); // Prevent infinite loop
+		}
+
 		if (this.updatePromise) {
 			return this.updatePromise;
 		}
 
-		this.updatePromise = this.doUpdate(updateType);
+		const newChain = [...__chain, this.notionId];
+
+		this.updatePromise = this.doUpdate(updateType, newChain);
 		return this.updatePromise;
 	}
 
-	private async doUpdate(updateType: UpdateType): Promise<void> {
+	private async doUpdate(
+		updateType: UpdateType,
+		chain: string[],
+	): Promise<void> {
 		try {
 			const data = cardSchema.safeParse(
 				await getPage(this.notionId, updateType),
@@ -147,7 +162,7 @@ export class NotionCard {
 				),
 			);
 
-			await Promise.all(parents.map((p) => p?.update(updateType)));
+			await Promise.all(parents.map((p) => p?.update(updateType, chain)));
 
 			// actually update the page
 			const newHours = this.getHours();
