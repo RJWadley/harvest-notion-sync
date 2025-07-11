@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@notionhq/client": "^4.0.0",
 		"@tanstack/pacer": "^0.8.0",
+		"async-mutex": "^0.5.0",
 		"better-memory-cache": "^1.0.8",
 		"harvest": "^2.2.6",
 		"minimatch": "^10.0.3",

@@ -97,21 +97,9 @@ export class NotionCard {
 
 	public update(updateType: UpdateType): Promise<void> {
 		if (this.updatePromise) {
-			if (updateType === "realtime") {
-				logMessage(
-					"AWAIT",
-					`update on [${this.projectName}] - "${this.taskName}" because it is already updating`,
-				);
-			}
 			return this.updatePromise;
 		}
 
-		if (updateType === "realtime") {
-			logMessage(
-				"START",
-				`update on [${this.projectName}] - "${this.taskName}"`,
-			);
-		}
 		this.updatePromise = this.doUpdate(updateType);
 		return this.updatePromise;
 	}
