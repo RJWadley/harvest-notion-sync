@@ -62,7 +62,7 @@ const processBulkUpdate = async (
 	);
 };
 
-const interval = 5 * 1000;
+const interval = 2 * 1000;
 let lastCheck: string | undefined;
 export const startWatching = async () => {
 	const waiting =
@@ -121,8 +121,6 @@ export const startWatching = async () => {
 		);
 	}
 
-	// at least 2 seconds of downtime between each request
-	await new Promise((resolve) => setTimeout(resolve, 2000));
 	await waiting;
 
 	startWatching();
