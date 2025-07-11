@@ -4,6 +4,7 @@ import type { UpdateType } from "./limits";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
+import { MINUTE } from "better-memory-cache";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -88,7 +89,9 @@ export class NotionCard {
 	private async backgroundUpdate(updateType: UpdateType) {
 		await this.update(updateType);
 
-		this.backgroundUpdate(updateType);
+		setTimeout(() => {
+			this.backgroundUpdate(updateType);
+		}, MINUTE * 5);
 	}
 
 	public async update(updateType: UpdateType) {
