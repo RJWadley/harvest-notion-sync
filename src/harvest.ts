@@ -36,7 +36,7 @@ const processBulkUpdate = async (
 
 	logMessage(`[BULK] Starting bulk update of ${total} entries`);
 
-	const chunkSize = 100;
+	const chunkSize = 10;
 	for (let i = 0; i < entries.length; i += chunkSize) {
 		const chunk = entries.slice(i, i + chunkSize);
 
