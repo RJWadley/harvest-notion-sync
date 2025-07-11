@@ -97,9 +97,21 @@ export class NotionCard {
 
 	public update(updateType: UpdateType): Promise<void> {
 		if (this.updatePromise) {
+			if (updateType === "realtime") {
+				logMessage(
+					"AWAIT",
+					`update on [${this.projectName}] - "${this.taskName}" because it is already updating`,
+				);
+			}
 			return this.updatePromise;
 		}
 
+		if (updateType === "realtime") {
+			logMessage(
+				"START",
+				`update on [${this.projectName}] - "${this.taskName}"`,
+			);
+		}
 		this.updatePromise = this.doUpdate(updateType);
 		return this.updatePromise;
 	}
@@ -154,7 +166,8 @@ export class NotionCard {
 			if (newHours === previousHours) {
 				if (updateType === "realtime") {
 					logMessage(
-						`[SKIP] hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
+						"SKIP",
+						`hours for [${this.projectName}] - "${this.taskName}" did not change (${newHours})`,
 					);
 				}
 				return;
@@ -162,7 +175,8 @@ export class NotionCard {
 			await updateHours(this.notionId, newHours, updateType);
 			if (updateType === "realtime") {
 				logMessage(
-					`[WRITE] updated hours for [${this.projectName}] - "${
+					"WRITE",
+					`updated hours for [${this.projectName}] - "${
 						this.taskName
 					}" to ${Math.round(newHours * 100) / 100} (${this.localHours} + ${
 						Math.round(this.childHours * 100) / 100

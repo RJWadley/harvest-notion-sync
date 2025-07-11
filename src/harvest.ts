@@ -34,7 +34,7 @@ const processBulkUpdate = async (
 	let processed = 0;
 	const total = entries.length;
 
-	logMessage(`[BULK] Starting bulk update of ${total} entries`);
+	logMessage("BULK", `Starting bulk update of ${total} entries`);
 
 	const chunkSize = 10;
 	for (let i = 0; i < entries.length; i += chunkSize) {
@@ -54,11 +54,12 @@ const processBulkUpdate = async (
 		);
 
 		processed += chunk.length;
-		logMessage(`[BULK] Processed ${processed}/${total} cards`);
+		logMessage("BULK", `Processed ${processed}/${total} cards`);
 	}
 
 	logMessage(
-		`[BULK] Bulk update complete: ${processed}/${total} cards processed`,
+		"BULK",
+		`Bulk update complete: ${processed}/${total} cards processed`,
 	);
 };
 
@@ -96,10 +97,10 @@ export const startWatching = async () => {
 
 	if (entries.length > 0) {
 		if (updateType === "realtime") {
-			logMessage("[LOOP] found", entries.length, "entries");
+			logMessage("LOOP", "found", entries.length, "entries");
 		}
 	} else {
-		logMessage("[LOOP] no entries found");
+		logMessage("LOOP", "no entries found");
 	}
 
 	if (updateType === "bulk") {

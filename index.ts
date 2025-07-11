@@ -1,5 +1,7 @@
+import logger from "node-color-log";
 import { startWatching } from "./src/harvest";
 
-console.log("starting up");
+logger.setDate(() => new Date().toLocaleTimeString());
+logger.info("starting up");
 
 startWatching();

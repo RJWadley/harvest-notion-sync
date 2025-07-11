@@ -51,6 +51,7 @@ async function withRetry<T>(
 			}
 
 			logMessage(
+				"NONE",
 				`${operationName} attempt ${attempt} timed out, retrying in ${baseDelay * attempt}ms...`,
 			);
 
