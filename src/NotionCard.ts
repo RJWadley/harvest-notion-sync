@@ -1,11 +1,11 @@
 import { MINUTE } from "better-memory-cache";
+import { $ } from "bun";
 import { z } from "zod";
 import { getHoursByName } from "./harvest";
 import type { UpdateType } from "./limits";
 import { logMessage, warn } from "./logging";
 import { getPage, queryDatabase, sendError, updateHours } from "./notion";
 import { clientNamesMatch, taskNamesMatch } from "./util";
-import { $ } from "bun";
 
 const cardSchema = z.object({
 	id: z.string(),
@@ -145,7 +145,20 @@ export class NotionCard {
 			const parentIds = data.properties["Parent task"].relation.map(
 				(r) => r.id,
 			);
-			const childIds = data.properties["Sub-tasks"].relation.map((r) => r.id);
+			const childIds = data.properties["Sub-tasks"].relation
+				.map((r) => r.id)
+				// skip if the card somehow references itself – otherwise we'll keep inflating hours
+				.filter((id) => {
+					const isSelf = id === this.notionId;
+					if (isSelf) {
+						warn(
+							`card ${this.notionId} lists itself as a sub-task`,
+							undefined,
+							updateType,
+						);
+					}
+					return !isSelf;
+				});
 
 			const children = await Promise.all(
 				childIds.map(async (childId) =>
