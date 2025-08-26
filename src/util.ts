@@ -27,20 +27,17 @@ export const taskNamesMatch = (
 		return false;
 	}
 
-	// some cards are in the format '[whatever] actual task name'
-	// for those we want to use just 'actual task name'
+	// normalize notes to task names:
+	// - use only the first line (ignore details on second line)
+	// - strip any inline [...] or (...) segments (ignore details on same line)
+	// - compare using only lowercase alphanumerics
+	const normalize = (name: string) => {
+		const firstLine = name.trim().split(/\r?\n/)[0] ?? "";
+		const withoutInlineDetails = firstLine
+			.replace(/\[[^\]]*\]/g, "")
+			.replace(/\([^)]*\)/g, "");
+		return withoutInlineDetails.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+	};
 
-	const onlyTaskNameA = nameA.trim().replace(/^\[.*\]/, "");
-	const onlyTaskNameB = nameB.trim().replace(/^\[.*\]/, "");
-
-	return (
-		onlyTaskNameA
-			.toLowerCase()
-			// only keep alphanumeric characters
-			.replaceAll(/[^a-z0-9]/g, "") ===
-		onlyTaskNameB
-			.toLowerCase()
-			// only keep alphanumeric characters
-			.replaceAll(/[^a-z0-9]/g, "")
-	);
+	return normalize(nameA) === normalize(nameB);
 };
