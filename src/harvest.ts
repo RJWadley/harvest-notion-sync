@@ -63,12 +63,51 @@ const processBulkUpdate = async (
 	);
 };
 
+const threeMonthsAgo = () => {
+	const date = new Date();
+	date.setMonth(date.getMonth() - 3);
+	return date.toISOString();
+};
+
+const runScheduledBulkUpdate = async () => {
+	logMessage("BULK", "Running scheduled bulk update for last 3 months");
+
+	await harvestRateLimit("bulk");
+	const entriesRequest = await harvest.timeEntries.list({
+		updated_since: threeMonthsAgo(),
+		is_running: false,
+	});
+
+	const entries = entriesRequest.time_entries
+		.map((e) => timeEntrySchema.safeParse(e))
+		.filter((e) => e.success)
+		.map((e) => e.data)
+		.filter((c) => c.client.name !== "Underbelly")
+		.filter((c) => c.client.name !== "Underbelly (Square)");
+
+	logMessage("BULK", `Found ${entries.length} entries from last 3 months`);
+
+	await processBulkUpdate(entries);
+
+	// schedule next bulk update in 1 hour
+	logMessage("BULK", "Scheduling next bulk update in 1 hour");
+	setTimeout(runScheduledBulkUpdate, 60 * 60 * 1000);
+};
+
 const interval = 2 * 1000;
 let lastCheck: string | undefined;
-export const startWatching = async () => {
-	const waiting =
-		// wait at least 5 seconds between each request
-		new Promise((resolve) => setTimeout(resolve, interval));
+
+export const startWatching = () => {
+	// kick off bulk update in background (don't await - priority system handles ordering)
+	runScheduledBulkUpdate();
+	// start realtime loop immediately
+	lastCheck = new Date().toISOString();
+	logMessage("LOOP", "Starting realtime watch loop");
+	realtimeLoop();
+};
+
+const realtimeLoop = async () => {
+	const waiting = new Promise((resolve) => setTimeout(resolve, interval));
 
 	const checkTime = lastCheck;
 	lastCheck = new Date(Date.now() - interval).toISOString();
@@ -93,38 +132,25 @@ export const startWatching = async () => {
 		.filter((c) => c.client.name !== "Underbelly")
 		.filter((c) => c.client.name !== "Underbelly (Square)");
 
-	const updateType: UpdateType = entries.length > 100 ? "bulk" : "realtime";
-
 	if (entries.length > 0) {
-		if (updateType === "realtime") {
-			logMessage("LOOP", "found", entries.length, "entries");
-		}
-	} else {
-		logMessage("LOOP", "no entries found");
+		logMessage("LOOP", "found", entries.length, "entries");
 	}
 
-	if (updateType === "bulk") {
-		// Background bulk update - don't await
-		processBulkUpdate(entries);
-	} else {
-		// Realtime updates - await for immediate processing
-		await Promise.all(
-			entries.map(async (e) => {
-				const card = await NotionCard.getOrCreate(
-					{
-						name: e.notes,
-						project: e.client.name,
-					},
-					updateType,
-				);
-				await card?.update(updateType);
-			}),
-		);
-	}
+	await Promise.all(
+		entries.map(async (e) => {
+			const card = await NotionCard.getOrCreate(
+				{
+					name: e.notes,
+					project: e.client.name,
+				},
+				"realtime",
+			);
+			await card?.update("realtime");
+		}),
+	);
 
 	await waiting;
-
-	startWatching();
+	realtimeLoop();
 };
 
 const clientSchema = z.object({
