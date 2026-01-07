@@ -4,23 +4,23 @@
 	"type": "module",
 	"packageManager": "bun",
 	"devDependencies": {
-		"@biomejs/biome": "^2.1.1",
+		"@biomejs/biome": "^2.3.11",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
 		"typescript": "^5.4.5"
 	},
 	"dependencies": {
-		"@notionhq/client": "^4.0.0",
-		"@tanstack/pacer": "^0.8.0",
+		"@notionhq/client": "^5.6.0",
+		"@tanstack/pacer": "^0.17.1",
 		"async-mutex": "^0.5.0",
 		"better-memory-cache": "^1.0.8",
 		"harvest": "^2.2.6",
-		"minimatch": "^10.0.3",
-		"node-color-log": "^12.0.1",
+		"minimatch": "^10.1.1",
+		"node-color-log": "^13.0.3",
 		"p-ratelimit": "^1.0.1",
-		"slack-web-api-client": "^1.1.6",
-		"zod": "^3.25.76"
+		"slack-web-api-client": "^1.1.8",
+		"zod": "^4.3.5"
 	},
 	"scripts": {
 		"start": "bun install && bun --bun run index.ts"

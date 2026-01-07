@@ -90,7 +90,48 @@ export const getPage: typeof runGetPage = async (notionId, updateType) => {
 
 /**
  * database queries
+ *
+ * in notion sdk v5, databases are containers that hold data sources.
+ * to query, we need to first retrieve the database to get its data_source_id,
+ * then query the data source.
  */
+
+// cache data source IDs so we don't have to retrieve the database every time
+const dataSourceIdCache = new Cache<Promise<string>>({
+	namespace: "dataSourceId",
+	expireAfterMs: MINUTE * 30,
+});
+
+const getDataSourceId = async (
+	databaseId: string,
+	updateType: UpdateType,
+): Promise<string> => {
+	const cached = dataSourceIdCache.get(databaseId);
+	if (cached) return cached;
+
+	const result = (async () => {
+		const notion = await notionRateLimit(updateType);
+		const dbInfo = await withRetry(
+			() => notion.databases.retrieve({ database_id: databaseId }),
+			`getDataSourceId(${databaseId})`,
+			updateType,
+		);
+
+		if (!("data_sources" in dbInfo) || dbInfo.data_sources.length === 0) {
+			throw new Error(`Database ${databaseId} has no data sources`);
+		}
+
+		const firstDataSource = dbInfo.data_sources[0];
+		if (!firstDataSource) {
+			throw new Error(`Database ${databaseId} has no data sources`);
+		}
+
+		return firstDataSource.id;
+	})();
+
+	dataSourceIdCache.set(databaseId, result);
+	return result;
+};
 
 const runQueryDatabase = async ({
 	type,
@@ -98,14 +139,17 @@ const runQueryDatabase = async ({
 	updateType,
 }: {
 	type: "client" | "task";
-	filter?: Parameters<typeof Client.prototype.databases.query>[0]["filter"];
+	filter?: Parameters<typeof Client.prototype.dataSources.query>[0]["filter"];
 	updateType: UpdateType;
 }) => {
+	const databaseId = type === "client" ? clientDatabase : taskDatabase;
+	const dataSourceId = await getDataSourceId(databaseId, updateType);
+
 	const notion = await notionRateLimit(updateType);
 	return withRetry(
 		() =>
-			notion.databases.query({
-				database_id: type === "client" ? clientDatabase : taskDatabase,
+			notion.dataSources.query({
+				data_source_id: dataSourceId,
 				filter,
 			}),
 		`queryDatabase(${type})`,
