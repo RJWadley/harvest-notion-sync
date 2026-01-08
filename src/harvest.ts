@@ -1,26 +1,10 @@
 import Cache, { SECOND } from "better-memory-cache";
-import Harvest from "harvest";
 import { z } from "zod";
-import { harvestRateLimit, type UpdateType } from "./limits";
+import { listClients, listTimeEntries } from "./harvest-api";
+import type { UpdateType } from "./limits";
 import { logMessage } from "./logging";
 import { NotionCard } from "./NotionCard";
 import { clientNamesMatch, taskNamesMatch } from "./util";
-
-const accessToken = Bun.env.HARVEST_TOKEN;
-const accountId = Bun.env.ACCOUNT_ID;
-if (!accessToken || !accountId) {
-	throw new Error("Missing harvest credentials");
-}
-
-const harvest = new Harvest({
-	subdomain: "reformcollective",
-	userAgent: "NotionSync (robbie@reformcollective.com)",
-	concurrency: 1,
-	auth: {
-		accessToken,
-		accountId,
-	},
-});
 
 const timeEntrySchema = z.object({
 	client: z.object({ name: z.string() }),
@@ -72,11 +56,13 @@ const threeMonthsAgo = () => {
 const runScheduledBulkUpdate = async () => {
 	logMessage("BULK", "Running scheduled bulk update for last 3 months");
 
-	await harvestRateLimit("bulk");
-	const entriesRequest = await harvest.timeEntries.list({
-		updated_since: threeMonthsAgo(),
-		is_running: false,
-	});
+	const entriesRequest = await listTimeEntries(
+		{
+			updated_since: threeMonthsAgo(),
+			is_running: false,
+		},
+		"bulk",
+	);
 
 	const entries = entriesRequest.time_entries
 		.map((e) => timeEntrySchema.safeParse(e))
@@ -112,15 +98,19 @@ const realtimeLoop = async () => {
 	const checkTime = lastCheck;
 	lastCheck = new Date(Date.now() - interval).toISOString();
 
-	await harvestRateLimit("realtime");
-	const updatedEntriesRequest = await harvest.timeEntries.list({
-		updated_since: checkTime,
-		is_running: false,
-	});
-	await harvestRateLimit("realtime");
-	const runningEntriesRequest = await harvest.timeEntries.list({
-		is_running: true,
-	});
+	const updatedEntriesRequest = await listTimeEntries(
+		{
+			updated_since: checkTime,
+			is_running: false,
+		},
+		"realtime",
+	);
+	const runningEntriesRequest = await listTimeEntries(
+		{
+			is_running: true,
+		},
+		"realtime",
+	);
 
 	const entries = [
 		...updatedEntriesRequest.time_entries,
@@ -166,16 +156,15 @@ const runGetHoursByName = async ({
 	taskName: string;
 	updateType: UpdateType;
 }) => {
-	await harvestRateLimit(updateType);
-	const allClients = clientSchema.safeParse(await harvest.clients.list()).data
+	const allClients = clientSchema.safeParse(await listClients(updateType)).data
 		?.clients;
 	if (!allClients) throw new Error("clients did not match expected schema");
 
 	const client = allClients.find((c) => clientNamesMatch(c.name, clientName));
-	await harvestRateLimit(updateType);
-	const allEntries = await harvest.timeEntries.list({
-		client_id: client?.id,
-	});
+	const allEntries = await listTimeEntries(
+		{ client_id: client?.id },
+		updateType,
+	);
 	const allMatchingEntries = allEntries.time_entries.filter((e) =>
 		taskNamesMatch(e.notes, taskName),
 	);
