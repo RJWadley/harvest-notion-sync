@@ -1,5 +1,6 @@
 import type { Client } from "@notionhq/client";
 import Cache, { MINUTE } from "better-memory-cache";
+import { sendHeartbeat } from "./heartbeat";
 import type { UpdateType } from "./limits";
 import { notionRateLimit, notionWriteLimit } from "./limits";
 import { logMessage, warn } from "./logging";
@@ -230,6 +231,7 @@ const runUpdateHours = async (
 			updateType,
 		);
 		pageCache.set(notionId, Promise.resolve(result));
+		sendHeartbeat();
 		return result;
 	} catch (e) {
 		warn(`failed to update hours for ${notionId}`, e, updateType);

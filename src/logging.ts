@@ -6,7 +6,7 @@ import type { UpdateType } from "./limits";
 
 logger.setDate(() => new Date().toLocaleTimeString());
 
-type LogType = "LOOP" | "BULK" | "SKIP" | "WRITE" | "API";
+type LogType = "LOOP" | "BULK" | "SKIP" | "WRITE" | "API" | "HEARTBEAT";
 
 const logMutex = new Mutex();
 
@@ -39,13 +39,21 @@ export const logMessage = async (
 			return;
 		}
 
-		type Color = "blue" | "magenta" | "yellow" | "green" | "cyan" | "white";
+		type Color =
+			| "blue"
+			| "magenta"
+			| "yellow"
+			| "green"
+			| "cyan"
+			| "white"
+			| "red";
 		const colorMap: Record<LogType, Color> = {
 			LOOP: "blue",
 			BULK: "magenta",
 			SKIP: "yellow",
 			WRITE: "green",
 			API: "white",
+			HEARTBEAT: "red",
 		};
 
 		logger

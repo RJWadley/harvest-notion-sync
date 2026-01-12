@@ -1,6 +1,7 @@
 import Cache, { SECOND } from "better-memory-cache";
 import { z } from "zod";
 import { listClients, listTimeEntries } from "./harvest-api";
+import { sendHeartbeat } from "./heartbeat";
 import type { UpdateType } from "./limits";
 import { logMessage } from "./logging";
 import { NotionCard } from "./NotionCard";
@@ -138,6 +139,9 @@ const realtimeLoop = async () => {
 			await card?.update("realtime");
 		}),
 	);
+
+	// reset heartbeat after each loop iteration to prove the loop is still running
+	sendHeartbeat();
 
 	await waiting;
 	realtimeLoop();
