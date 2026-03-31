@@ -12,9 +12,19 @@ const processClientName = (name: string) => {
 	return basic.replaceAll("new form", "newform");
 };
 
+// Pairs of client names that should never cross-match, even if one is a
+// prefix of the other (e.g. "Thoughtly" vs "Thoughtly V.2").
+const DISTINCT_CLIENT_PAIRS: Array<[string, string]> = [
+	["thoughtly", "thoughtly v.2"],
+];
+
 export const clientNamesMatch = (nameA: string, nameB: string) => {
 	const a = processClientName(nameA);
 	const b = processClientName(nameB);
+
+	for (const [x, y] of DISTINCT_CLIENT_PAIRS) {
+		if ((a === x && b === y) || (a === y && b === x)) return false;
+	}
 
 	return a.startsWith(b) || b.startsWith(a);
 };
