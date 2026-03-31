@@ -8,6 +8,7 @@
  * are authoritative.
  */
 
+import Harvest from "harvest";
 import { Client } from "@notionhq/client";
 import { z } from "zod";
 
@@ -21,6 +22,8 @@ const PROJECT_NAME = "Thoughtly V.2";
 const clientDatabase = Bun.env.CLIENT_DATABASE ?? "";
 const taskDatabase = Bun.env.TASK_DATABASE ?? "";
 const notionToken = Bun.env.NOTION_TOKEN_A ?? "";
+const harvestToken = Bun.env.HARVEST_TOKEN ?? "";
+const harvestAccountId = Bun.env.ACCOUNT_ID ?? "";
 
 if (!clientDatabase || !taskDatabase || !notionToken) {
 	console.error(
@@ -30,6 +33,14 @@ if (!clientDatabase || !taskDatabase || !notionToken) {
 }
 
 const notion = new Client({ auth: notionToken });
+const harvest = harvestToken && harvestAccountId
+	? new Harvest({
+			subdomain: "reformcollective",
+			userAgent: "NotionSync (robbie@reformcollective.com)",
+			concurrency: 1,
+			auth: { accessToken: harvestToken, accountId: harvestAccountId },
+		})
+	: null;
 
 // ---------------------------------------------------------------------------
 // Schemas (same as NotionCard.ts)
@@ -111,10 +122,36 @@ async function queryDataSource(
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-console.log(`\n🔍  Looking for duplicates of "${TASK_NAME}" in "${PROJECT_NAME}"\n`);
 
 const clientDataSourceId = await getDataSourceId(clientDatabase);
 const taskDataSourceId = await getDataSourceId(taskDatabase);
+
+// 0. List all Harvest + Notion "thoughtly" clients so we can see what's what
+if (harvest) {
+	const harvestClients = await harvest.clients.list();
+	const thoughtlyHarvestClients = (harvestClients as any).clients
+		.filter((c: any) => c.name.toLowerCase().includes("thoughtly"))
+		.map((c: any) => `    • [${c.id}] "${c.name}"`);
+	console.log(`\n🌾  Harvest clients matching "thoughtly":`);
+	console.log(thoughtlyHarvestClients.join("\n") || "    (none)");
+}
+
+const allNotionClients = await queryDataSource(clientDataSourceId);
+const thoughtlyNotionClients = allNotionClients.results
+	.map((c) => clientSchema.safeParse(c))
+	.filter((r) => r.success)
+	.filter((r) =>
+		r.data.properties["Project Name"].title
+			.map((t) => t.plain_text)
+			.join("")
+			.toLowerCase()
+			.includes("thoughtly"),
+	)
+	.map((r) => `    • [${r.data.id}] "${r.data.properties["Project Name"].title.map((t) => t.plain_text).join("")}"`);
+console.log(`\n📓  Notion clients matching "thoughtly":`);
+console.log(thoughtlyNotionClients.join("\n") || "    (none)");
+
+console.log(`\n🔍  Looking for duplicates of "${TASK_NAME}" in "${PROJECT_NAME}"\n`);
 
 // 1. Find matching client(s)
 const clientResults = await queryDataSource(clientDataSourceId);

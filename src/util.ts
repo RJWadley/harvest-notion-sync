@@ -9,8 +9,6 @@ const processClientName = (name: string) => {
 
 	if (basic === "inside milk") return "milk inside";
 
-	if (basic.includes("thoughtly")) return "thoughtly v.2";
-
 	return basic.replaceAll("new form", "newform");
 };
 
